@@ -2,53 +2,115 @@ import streamlit as st
 import sqlite3
 from pathlib import Path
 
-# --- CONFIGURATION MOBILE ---
-st.set_page_config(page_title="Assistant CCN", layout="centered")
+# --- CONFIGURATION ---
+st.set_page_config(page_title="CCN 3239 - Partie IV", layout="centered")
 
-# Chemin relatif pour GitHub
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "CCN_3239.db"
 
-# Style pour de gros boutons tactiles
+def get_connection():
+    return sqlite3.connect(str(DB_PATH))
+
+# --- STYLE CSS MOBILE ---
 st.markdown("""
     <style>
-    .stButton>button {
-        width: 100%;
-        height: 4em;
-        border-radius: 15px;
-        font-weight: bold;
-        font-size: 18px;
-        margin-bottom: 10px;
-        border: 2px solid #1e3799;
-    }
+    .stButton>button { width: 100%; border-radius: 12px; height: 3.5em; font-weight: bold; margin-bottom: 10px; border: 2px solid #1e3799; }
+    .question-box { background-color: #f8f9fa; padding: 20px; border-radius: 15px; border-left: 8px solid #1e3799; margin-bottom: 20px; }
+    .essentiel-box { background-color: #ecfdf5; border-left: 5px solid #27ae60; padding: 15px; border-radius: 10px; font-size: 17px; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🛡️ CCN 3239")
-st.subheader("Choisissez un thème :")
+# --- INITIALISATION ---
+if 'etape' not in st.session_state:
+    st.session_state.etape = 1
+    st.session_state.choix = {}
 
-# --- CONNEXION ET AFFICHAGE ---
-if DB_PATH.exists():
-    conn = sqlite3.connect(str(DB_PATH))
-    try:
-        # On récupère les thèmes uniques de la table de navigation
-        query = "SELECT DISTINCT theme FROM navigation_pedagogique ORDER BY theme"
-        themes = conn.execute(query).fetchall()
+st.title("🛡️ Assistant CCN 3239")
+st.caption("Focus : Vie et Fin du Contrat de Travail")
 
-        if themes:
-            for t in themes:
-                # Création d'un bouton par thème
-                if st.button(f"📂 {t[0]}"):
-                    st.success(f"Vous avez choisi : {t[0]}")
-                    st.info("Étape suivante : Nous allons lier ce bouton aux métiers.")
-        else:
-            st.warning("La table 'navigation_pedagogique' semble vide.")
+conn = get_connection()
+
+try:
+    # ETAPE 1 : LE THÈME (Issu de W1.csv)
+    if st.session_state.etape == 1:
+        st.markdown("<div class='question-box'><h3>1. Choisissez une thématique :</h3></div>", unsafe_allow_html=True)
+        # On filtre ici sur les thèmes de la Partie IV si nécessaire dans votre CSV
+        themes = conn.execute("SELECT DISTINCT theme FROM navigation_pedagogique ORDER BY theme").fetchall()
+        for t in themes:
+            if st.button(f"📂 {t[0]}"):
+                st.session_state.choix['theme'] = t[0]
+                st.session_state.etape = 2
+                st.rerun()
+
+    # ETAPE 2 : LE MÉTIER (Filtrage de Socle strict)
+    elif st.session_state.etape == 2:
+        st.markdown("<div class='question-box'><h3>2. Quel est votre métier ?</h3></div>", unsafe_allow_html=True)
+        
+        # Configuration des socles selon votre demande
+        metiers = {
+            "🧸 Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
+            "👶 Assistant Parental (Garde d'enfants)": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
+            "🏠 Employé Familial": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
+            "👴 Assistant de Vie (Dépendance)": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
+            "🛠 Autres (Socle Commun)": "DISPOSITIONS COMMUNES"
+        }
+        
+        for label, socle_val in metiers.items():
+            if st.button(label):
+                st.session_state.choix['socle'] = socle_val
+                st.session_state.etape = 3
+                st.rerun()
+        
+        if st.button("⬅️ Retour"):
+            st.session_state.etape = 1
+            st.rerun()
+
+    # ETAPE 3 : LA QUESTION PRÉCISE (W1.csv)
+    elif st.session_state.etape == 3:
+        theme_sel = st.session_state.choix['theme']
+        st.markdown(f"<div class='question-box'><h3>3. Votre question sur :</h3><p>{theme_sel}</p></div>", unsafe_allow_html=True)
+        
+        query = "SELECT reponse_bouton, articles_lies FROM navigation_pedagogique WHERE theme = ?"
+        options = conn.execute(query, (theme_sel,)).fetchall()
+
+        for label, art_id in options:
+            if st.button(label):
+                st.session_state.choix['article_id'] = art_id
+                st.session_state.etape = 4
+                st.rerun()
+        
+        if st.button("⬅️ Retour"):
+            st.session_state.etape = 2
+            st.rerun()
+
+    # ETAPE 4 : RÉSULTAT FINAL
+    elif st.session_state.etape == 4:
+        art_id = str(st.session_state.choix['article_id']).strip()
+        socle_user = st.session_state.choix['socle']
+        
+        # Requête précise avec le socle choisi
+        query = "SELECT affichage_article, texte_integral, texte_simplifie FROM convention_collective WHERE numero_article_isole = ? AND socle = ?"
+        res = conn.execute(query, (art_id, socle_user)).fetchone()
+
+        if res:
+            titre, integral, simplifie = res
+            st.subheader(f"Article {art_id}")
+            st.write(f"**{titre}**")
             
-    except Exception as e:
-        st.error(f"Erreur lors de la lecture de la table : {e}")
-    finally:
-        conn.close()
-else:
-    st.error("Fichier CCN_3239.db introuvable sur GitHub.")
+            if simplifie and len(simplifie) > 10:
+                st.success("💡 L'ESSENTIEL POUR L'APPRENANT")
+                st.markdown(f"<div class='essentiel-box'>{simplifie}</div>", unsafe_allow_html=True)
+                with st.expander("⚖️ Texte Officiel Intégral"):
+                    st.write(integral)
+            else:
+                st.info("⚖️ TEXTE OFFICIEL")
+                st.markdown(f"<div class='essentiel-box'>{integral}</div>", unsafe_allow_html=True)
+        else:
+            st.warning("Information non spécifique à votre socle ou article introuvable.")
 
-st.caption("Application pas-à-pas - Étape 1 : Structure de navigation")
+        if st.button("🔄 Nouvelle recherche"):
+            st.session_state.etape = 1
+            st.rerun()
+
+finally:
+    conn.close()
