@@ -10,8 +10,7 @@ DB_PATH = "CCN_3239.db"
 def get_connection():
     return sqlite3.connect(DB_PATH)
 
-# --- LA MATRICE DES RÉPONSES (L'ENTONNOIR) ---
-# Cette structure fait le lien entre vos questions et les articles de la base
+# --- MATRICE DE L'ENTONNOIR (VOS QUESTIONS) ---
 ARBRE_DECISION = {
     "TITRE 1  Formation du contrat de travail": {
         "📝 Rédaction du contrat": {
@@ -61,10 +60,10 @@ ARBRE_DECISION = {
 # --- STYLE CSS ---
 st.markdown("""
     <style>
-    .stButton>button { width: 100%; border-radius: 12px; height: 3.8em; font-weight: bold; margin-bottom: 10px; border: 2px solid #dcdde1; }
-    .question-box { background-color: #f1f2f6; padding: 20px; border-radius: 15px; border-left: 8px solid #1e3799; margin-bottom: 25px; }
-    .essentiel-box { background-color: #ecfdf5; border-left: 5px solid #27ae60; padding: 18px; border-radius: 10px; font-size: 17px; }
-    .titre-art { color: #1e3799; font-weight: bold; font-size: 19px; margin-top: 15px; }
+    .stButton>button { width: 100%; border-radius: 10px; height: 3.5em; font-weight: bold; margin-bottom: 8px; border: 2px solid #dcdde1; }
+    .question-box { background-color: #f1f2f6; padding: 20px; border-radius: 15px; border-left: 8px solid #1e3799; margin-bottom: 20px; }
+    .essentiel-box { background-color: #ecfdf5; border-left: 5px solid #27ae60; padding: 18px; border-radius: 10px; font-size: 18px; }
+    .titre-art { color: #1e3799; font-weight: bold; font-size: 20px; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -79,27 +78,26 @@ else:
 
     conn = get_connection()
 
-    # --- ÉTAPE 1 : SITUATION (DÉBUT / FIN) ---
+    # --- ÉTAPE 1 : SITUATION (DÉBUT/FIN) ---
     if st.session_state.etape == 1:
         st.markdown("<div class='question-box'><h3>1. Quelle est la situation ?</h3></div>", unsafe_allow_html=True)
-        if st.button("🐣 Début de contrat (Embauche, essai...)"):
+        if st.button("🐣 Début de contrat"):
             st.session_state.choix['titre'] = "TITRE 1  Formation du contrat de travail"
             st.session_state.etape = 2
             st.rerun()
-        if st.button("🏁 Fin de contrat (Rupture, préavis...)"):
+        if st.button("🏁 Fin de contrat"):
             st.session_state.choix['titre'] = "TITRE 2  Rupture du contrat de travail"
             st.session_state.etape = 2
             st.rerun()
 
-    # --- ÉTAPE 2 : LE MÉTIER ---
+    # --- ÉTAPE 2 : MÉTIER ---
     elif st.session_state.etape == 2:
         st.markdown("<div class='question-box'><h3>2. Pour quel métier ?</h3></div>", unsafe_allow_html=True)
         metiers = {
             "🧸 Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
-            "👶 Assistant Parental (Garde d'enfants)": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
+            "👶 Assistant Parental": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
             "🧹 Employé Familial": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
-            "👨‍🦽 Assistant de Vie (Dépendance)": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
-            "🛠 Autres métiers": "DISPOSITIONS COMMUNES"
+            "👨‍🦽 Assistant de Vie": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR"
         }
         for label, socle in metiers.items():
             if st.button(label):
@@ -110,64 +108,71 @@ else:
             st.session_state.etape = 1
             st.rerun()
 
-    # --- ÉTAPE 3 : THÈME ET QUESTION FERMÉE ---
+    # --- ÉTAPE 3 : ENTONNOIR (THÈME -> QUESTION) ---
     elif st.session_state.etape == 3:
         titre_sel = st.session_state.choix['titre']
         themes = ARBRE_DECISION.get(titre_sel, {})
         
-        # Si aucun thème n'est encore choisi
         if 'theme' not in st.session_state.choix:
-            st.markdown("<div class='question-box'><h3>3. Quel thème vous intéresse ?</h3></div>", unsafe_allow_html=True)
-            for theme in themes.keys():
-                if st.button(theme):
-                    st.session_state.choix['theme'] = theme
+            st.markdown("<div class='question-box'><h3>3. Choisissez un thème :</h3></div>", unsafe_allow_html=True)
+            for t in themes.keys():
+                if st.button(t):
+                    st.session_state.choix['theme'] = t
                     st.rerun()
         else:
-            # On pose la question fermée du sous-thème
             theme_sel = st.session_state.choix['theme']
-            question_data = themes[theme_sel]
-            st.markdown(f"<div class='question-box'><h3>{question_data['question']}</h3></div>", unsafe_allow_html=True)
-            
-            for rep_label, articles in question_data['reponses'].items():
+            st.markdown(f"<div class='question-box'><h3>{themes[theme_sel]['question']}</h3></div>", unsafe_allow_html=True)
+            for rep_label, articles in themes[theme_sel]['reponses'].items():
                 if st.button(rep_label):
-                    st.session_state.choix['articles'] = articles
+                    st.session_state.choix['articles_selectionnes'] = articles
                     st.session_state.etape = 4
                     st.rerun()
         
-        if st.button("⬅️ Retour au métier"):
-            if 'theme' in st.session_state.choix:
-                del st.session_state.choix['theme']
-            else:
-                st.session_state.etape = 2
+        if st.button("⬅️ Retour"):
+            if 'theme' in st.session_state.choix: del st.session_state.choix['theme']
+            else: st.session_state.etape = 2
             st.rerun()
 
-    # --- ÉTAPE 4 : AFFICHAGE DES ARTICLES ---
+    # --- ÉTAPE 4 : CHOIX DE L'ARTICLE PRÉCIS ---
     elif st.session_state.etape == 4:
+        st.markdown("<div class='question-box'><h3>4. Sélectionnez l'article :</h3></div>", unsafe_allow_html=True)
+        nums = st.session_state.choix['articles_selectionnes']
         socle_sel = st.session_state.choix['socle']
-        articles_a_chercher = st.session_state.choix['articles']
-        
-        st.info(f"📍 {st.session_state.choix.get('theme')}")
 
-        for art_num in articles_a_chercher:
-            query = "SELECT affichage_article, texte_integral, texte_simplifie FROM convention_collective WHERE numero_article_isole = ? AND socle = ?"
-            res = conn.execute(query, (art_num, socle_sel)).fetchone()
+        for n in nums:
+            # Récupérer le titre de l'article pour le bouton
+            res = conn.execute("SELECT affichage_article FROM convention_collective WHERE numero_article_isole = ? AND socle = ?", (n, socle_sel)).fetchone()
+            titre_art = res[0] if res else f"Article {n}"
             
-            if res:
-                titre_art, integral, simplifie = res
-                st.markdown(f"<div class='titre-art'>Article {art_num} : {titre_art}</div>", unsafe_allow_html=True)
-                
-                # Affichage intelligent : Simplifié (A2) sinon Intégral
-                contenu = simplifie if (simplifie and simplifie.strip()) else integral
-                label = "💡 L'ESSENTIEL (A2)" if (simplifie and simplifie.strip()) else "⚖️ TEXTE OFFICIEL"
-                
-                st.markdown(f"**{label}**")
-                st.markdown(f"<div class='essentiel-box'>{contenu}</div>", unsafe_allow_html=True)
-                
-                if simplifie and simplifie.strip():
-                    with st.expander("Consulter le texte juridique complet"):
-                        st.write(integral)
-                st.divider()
+            if st.button(f"📄 Art. {n} - {titre_art}"):
+                st.session_state.choix['article_final'] = n
+                st.session_state.etape = 5
+                st.rerun()
 
+        if st.button("⬅️ Retour"):
+            st.session_state.etape = 3
+            st.rerun()
+
+    # --- ÉTAPE 5 : AFFICHAGE DE LA RÉPONSE ---
+    elif st.session_state.etape == 5:
+        num = st.session_state.choix['article_final']
+        socle = st.session_state.choix['socle']
+        res = conn.execute("SELECT affichage_article, texte_integral, texte_simplifie FROM convention_collective WHERE numero_article_isole = ? AND socle = ?", (num, socle)).fetchone()
+        
+        if res:
+            titre, integral, simplifie = res
+            st.markdown(f"<div class='titre-art'>Article {num} : {titre}</div>", unsafe_allow_html=True)
+            
+            contenu = simplifie if (simplifie and simplifie.strip()) else integral
+            label = "💡 L'ESSENTIEL (A2)" if (simplifie and simplifie.strip()) else "⚖️ TEXTE OFFICIEL"
+            
+            st.markdown(f"**{label}**")
+            st.markdown(f"<div class='essentiel-box'>{contenu}</div>", unsafe_allow_html=True)
+            
+            if simplifie and simplifie.strip():
+                with st.expander("Consulter le texte juridique complet"):
+                    st.write(integral)
+        
         if st.button("🔄 Nouvelle recherche"):
             st.session_state.etape = 1
             st.session_state.choix = {}
