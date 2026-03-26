@@ -153,53 +153,53 @@ else:
             st.session_state.etape = 3
             st.rerun()
 
-   # --- ÉTAPE 5 : AFFICHAGE DE LA RÉPONSE FINALE ---
+   # --- ÉTAPE 5 : AFFICHAGE BRUT DE LA RÉPONSE ---
     elif st.session_state.etape == 5:
         num = st.session_state.choix['article_final']
         socle = st.session_state.choix['socle']
         
-        # Récupération de l'article précis dans la base
-        query = """
-            SELECT affichage_article, texte_integral, texte_simplifie 
-            FROM convention_collective 
-            WHERE numero_article_isole = ? AND socle = ?
-        """
+        # Récupération directe des deux versions
+        query = "SELECT affichage_article, texte_integral, texte_simplifie FROM convention_collective WHERE numero_article_isole = ? AND socle = ?"
         res = conn.execute(query, (num, socle)).fetchone()
         
         if res:
             titre, integral, simplifie = res
             
-            # Entête de la fiche
-            st.markdown(f"### Article {num}")
-            st.markdown(f"<div class='titre-art'>{titre}</div>", unsafe_allow_html=True)
-            st.divider()
+            st.subheader(f"Article {num} : {titre}")
+            
+            # Utilisation de colonnes pour choisir la vue
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("📖 Version Courte"):
+                    st.session_state.vue = "simple"
+            with col2:
+                if st.button("⚖️ Version Officielle"):
+                    st.session_state.vue = "integral"
 
-            # LOGIQUE D'AFFICHAGE :
-            # On vérifie si le résumé (A2) existe et n'est pas juste des espaces
-            has_simplifie = simplifie and simplifie.strip()
+            # Par défaut on affiche le simplifié, sinon l'intégral
+            mode = st.session_state.get('vue', 'simple')
 
-            if has_simplifie:
-                # 1. On affiche le résumé en priorité
-                st.markdown("#### 💡 L'essentiel à retenir")
-                st.markdown(f"<div class='essentiel-box'>{simplifie}</div>", unsafe_allow_html=True)
-                
-                # 2. On propose le texte intégral dans un bouton dépliant (expander)
-                st.write("") # Espacement
-                with st.expander("⚖️ Consulter le texte intégral officiel"):
-                    st.markdown(integral)
+            st.markdown("---")
+            
+            if mode == "simple":
+                st.write("**L'essentiel :**")
+                # On affiche le texte brut
+                if simplifie:
+                    st.text_area(label="Contenu simplifié", value=simplifie, height=250, disabled=True)
+                else:
+                    st.warning("Aucun résumé disponible. Consultez la version officielle.")
             else:
-                # 3. Si pas de résumé, on affiche le texte intégral directement
-                st.markdown("#### ⚖️ Texte officiel")
-                st.markdown(f"<div class='essentiel-box'>{integral}</div>", unsafe_allow_html=True)
-                st.info("Note : Aucune version simplifiée n'est disponible pour cet article.")
+                st.write("**Texte complet :**")
+                st.text_area(label="Contenu intégral", value=integral, height=400, disabled=True)
 
-        # Bouton de sortie pour revenir au début
-        st.write("")
-        if st.button("🔄 Faire une autre recherche"):
-            # On réinitialise tout sauf la connexion
-            for key in list(st.session_state.keys()):
-                if key != 'etape': del st.session_state[key]
+        if st.button("⬅️ Retour à la liste"):
+            st.session_state.etape = 4
+            st.rerun()
+            
+        if st.button("🔄 Nouvelle recherche"):
             st.session_state.etape = 1
+            st.session_state.choix = {}
             st.rerun()
 
     conn.close()
