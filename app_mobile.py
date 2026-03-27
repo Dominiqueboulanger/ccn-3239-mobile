@@ -56,7 +56,7 @@ if 'etape' not in st.session_state:
     st.session_state.etape = 1
     st.session_state.choix = {}
 
-st.title("🛡️ Assistant CCN 3239")
+st.title("Le contrat de travail")
 st.write("---")
 
 conn = get_connection()
