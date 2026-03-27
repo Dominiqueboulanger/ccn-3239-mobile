@@ -28,11 +28,11 @@ if 'etape' not in st.session_state:
 
 st.title("🛡️ Assistant CCN 3239")
 
-# --- ÉTAPE 1 : MÉTIER (Synchronisé avec la base) ---
+# --- ÉTAPE 1 : MÉTIER (Synchronisé avec la logique CCN) ---
 if st.session_state.etape == 1:
     st.subheader("1. Quel est votre métier ?")
     
-    # Mapping précis avec les valeurs MAJUSCULES de votre base
+    # Mapping strict avec les valeurs probables de votre table 'convention_collective'
     btns = {
         "Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
         "Assistant Parental (Garde d'enfants)": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
