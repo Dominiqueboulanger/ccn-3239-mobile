@@ -28,11 +28,11 @@ if 'etape' not in st.session_state:
 
 st.title("🛡️ Assistant CCN 3239")
 
-# ETAPE 1 : LE MÉTIER (Synchronisation des étiquettes SPE)
+# ETAPE 1 : LE MÉTIER
     if st.session_state.etape == 1:
         st.markdown("<div class='question-box'><h3>1. Quel est votre métier ?</h3></div>", unsafe_allow_html=True)
         
-        # Le dictionnaire suivant fait le pont entre le bouton et votre base SQL
+        # Nous mappons les boutons vers la valeur exacte attendue en base (MAJUSCULES)
         metiers = {
             "🧸 Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
             "👶 Assistant Parental (Garde d'enfants)": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
