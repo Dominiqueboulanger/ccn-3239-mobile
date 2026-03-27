@@ -19,7 +19,6 @@ def get_connection():
 def export_pdf(article_num, titre, essentiel, integral):
     pdf = FPDF()
     pdf.add_page()
-    # Utilisation de polices standard pour la compatibilité
     pdf.set_font("Helvetica", "B", 16)
     pdf.cell(0, 10, f"Article {article_num}", ln=True, align='C')
     pdf.ln(5)
@@ -33,7 +32,6 @@ def export_pdf(article_num, titre, essentiel, integral):
         pdf.set_font("Helvetica", "B", 11)
         pdf.cell(0, 10, "L'ESSENTIEL :", ln=True, fill=True)
         pdf.set_font("Helvetica", "", 10)
-        # Nettoyage des balises HTML pour le PDF
         clean_essentiel = essentiel.replace("<b>", "").replace("</b>", "").replace("<br>", "\n")
         pdf.multi_cell(0, 7, clean_essentiel.encode('latin-1', 'replace').decode('latin-1'), fill=True)
         pdf.ln(10)
@@ -48,7 +46,6 @@ def export_pdf(article_num, titre, essentiel, integral):
 # --- STYLE CSS ADAPTÉ SMARTPHONE ---
 st.markdown("""
     <style>
-    /* Boutons larges avec support pour textes longs */
     .stButton>button { 
         width: 100%; 
         border-radius: 15px; 
@@ -58,14 +55,13 @@ st.markdown("""
         margin-bottom: 12px; 
         border: 2px solid #1e3799; 
         background-color: white;
-        white-space: normal !important; /* Autorise le retour à la ligne */
-        text-align: left !important;   /* Aligne le texte à gauche pour la lecture */
+        white-space: normal !important; 
+        text-align: left !important;   
         padding: 10px 20px !important;
     }
     .question-box { background-color: #f8f9fa; padding: 15px; border-radius: 15px; border-left: 8px solid #1e3799; margin-bottom: 20px; }
     .essentiel-box { background-color: #ecfdf5; border-left: 5px solid #27ae60; padding: 15px; border-radius: 10px; color: #065f46; margin-bottom: 10px; }
     .renvoi-box { background-color: #fff9db; border: 2px dashed #f59f00; padding: 15px; border-radius: 10px; margin-top: 10px; margin-bottom: 10px; text-align: center; }
-    /* Bouton PDF Rouge pour mobile */
     .stDownloadButton>button { background-color: #d63031 !important; color: white !important; border: none !important; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: center !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -74,7 +70,7 @@ if 'etape' not in st.session_state:
     st.session_state.etape = 1
     st.session_state.choix = {}
 
-st.title(" CCN 3239 ")
+st.title("🛡️ CCN 3239 Mobile")
 
 # --- LOGIQUE ÉTAPES 1 À 4 ---
 if st.session_state.etape == 1:
@@ -105,16 +101,12 @@ elif st.session_state.etape == 3:
 elif st.session_state.etape == 4:
     st.markdown("### 📄 Articles")
     conn = get_connection()
-    # On récupère le numéro (pour la suite) et l'affichage (pour le bouton)
     arts = conn.execute("SELECT numero_article_isole, affichage_article FROM convention_collective WHERE socle = ? AND chapitres = ? ORDER BY numero_article_isole ASC", (st.session_state.choix['socle'], st.session_state.choix['chapitre'])).fetchall()
-    
     for i, a in enumerate(arts):
-        # On utilise affichage_article comme libellé du bouton
         if st.button(a['affichage_article'], key=f"a_{i}"): 
             st.session_state.choix['article_id'] = a['numero_article_isole']
             st.session_state.etape = 5
             st.rerun()
-            
     conn.close()
     if st.button("⬅️ Retour", key="r_4"): st.session_state.etape = 3; st.rerun()
 
@@ -122,7 +114,6 @@ elif st.session_state.etape == 4:
 elif st.session_state.etape == 5:
     art_id = st.session_state.choix['article_id']
     socle = st.session_state.choix['socle']
-    
     conn = get_connection()
     article = conn.execute("SELECT * FROM convention_collective WHERE numero_article_isole = ? AND socle = ?", (art_id, socle)).fetchone()
     conn.close()
@@ -132,15 +123,14 @@ elif st.session_state.etape == 5:
         st.info(article['affichage_article'])
         
         if article['texte_simplifie']:
-            st.markdown(f<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{article['texte_simplifie']}</div>, unsafe_allow_html=True)
+            # Correction ici : Ajout des guillemets manquants
+            st.markdown(f"<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{article['texte_simplifie']}</div>", unsafe_allow_html=True)
         
         st.write(article['texte_integral'])
 
-        # BOUTON PDF (Visible sur mobile)
         pdf_bytes = export_pdf(article['numero_article_isole'], article['affichage_article'], article['texte_simplifie'], article['texte_integral'])
         st.download_button(label="📥 Télécharger en PDF", data=pdf_bytes, file_name=f"Art_{article['numero_article_isole']}.pdf", mime="application/pdf")
 
-        # RENVOI AUTOMATIQUE
         mention = re.search(r"article\s+(\d+)", article['texte_integral'], re.IGNORECASE)
         if mention and mention.group(1) != str(art_id):
             num = mention.group(1)
