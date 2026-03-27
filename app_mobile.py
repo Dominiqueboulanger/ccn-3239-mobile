@@ -28,24 +28,25 @@ if 'etape' not in st.session_state:
 
 st.title("🛡️ Assistant CCN 3239")
 
-# --- ÉTAPE 1 : MÉTIER (Synchronisé avec la logique CCN) ---
-if st.session_state.etape == 1:
-    st.subheader("1. Quel est votre métier ?")
-    
-    # Mapping strict avec les valeurs probables de votre table 'convention_collective'
-    btns = {
-        "Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
-        "Assistant Parental (Garde d'enfants)": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
-        "Assistant de Vie Dépendance": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
-        "Employé Familial": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
-        "Autres": "SOCLE COMMUN"
-    }
-    
-    for label, val in btns.items():
-        if st.button(label):
-            st.session_state.choix['socle'] = val
-            st.session_state.etape = 2
-            st.rerun()
+# ETAPE 1 : LE MÉTIER (Synchronisation des étiquettes SPE)
+    if st.session_state.etape == 1:
+        st.markdown("<div class='question-box'><h3>1. Quel est votre métier ?</h3></div>", unsafe_allow_html=True)
+        
+        # Le dictionnaire suivant fait le pont entre le bouton et votre base SQL
+        metiers = {
+            "🧸 Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
+            "👶 Assistant Parental (Garde d'enfants)": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
+            "👴 Assistant de Vie (Dépendance)": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
+            "🏠 Employé Familial": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
+            "🛠 Autres (Socle Commun)": "SOCLE COMMUN"
+        }
+        
+        for label, socle_val in metiers.items():
+            if st.button(label):
+                st.session_state.choix['socle'] = socle_val
+                st.session_state.choix['metier_label'] = label
+                st.session_state.etape = 2
+                st.rerun()
 
 # --- ÉTAPE 2 : SITUATION ---
 elif st.session_state.etape == 2:
