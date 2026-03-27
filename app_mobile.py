@@ -67,23 +67,23 @@ if st.session_state.etape == 1:
     
     
     # 1. SOCLE : Assistant maternel
-    if st.button("👶 Assistant Maternel"):
+    if st.button("Assistant Maternel"):
         st.session_state.choix['socle'] = "Assistant maternel"
         st.session_state.etape = 2
         st.rerun()
         
     # 2. SOCLE : Salarié du particulier employeur
-    if st.button("🧸 Assistant Parental (Garde d'enfants)"):
+    if st.button("Assistant Parental (Garde d'enfants)"):
         st.session_state.choix['socle'] = "Salarié du particulier employeur"
         st.session_state.etape = 2
         st.rerun()
 
-    if st.button("👵 Assistant de Vie Dépendance"):
+    if st.button("Assistant de Vie Dépendance"):
         st.session_state.choix['socle'] = "Salarié du particulier employeur"
         st.session_state.etape = 2
         st.rerun()
 
-    if st.button("🧹 Employé Familial (Ménage, cuisine...)"):
+    if st.button("Employé Familial (Ménage, cuisine...)"):
         st.session_state.choix['socle'] = "Salarié du particulier employeur"
         st.session_state.etape = 2
         st.rerun()
