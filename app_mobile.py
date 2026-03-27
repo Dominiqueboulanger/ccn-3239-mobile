@@ -20,7 +20,7 @@ st.markdown("""
     .stButton>button { width: 100%; border-radius: 12px; min-height: 3.8em; font-weight: bold; margin-bottom: 10px; border: 2px solid #1e3799; background-color: white; }
     .question-box { background-color: #f8f9fa; padding: 20px; border-radius: 15px; border-left: 8px solid #1e3799; margin-bottom: 20px; }
     .essentiel-box { background-color: #ecfdf5; border-left: 5px solid #27ae60; padding: 15px; border-radius: 10px; color: #065f46; margin-bottom: 10px; }
-    .renvoi-box { background-color: #fff9db; border: 2px dashed #f59f00; padding: 15px; border-radius: 10px; margin-top: 20px; margin-bottom: 20px; text-align: center; }
+    .renvoi-box { background-color: #fff9db; border: 2px dashed #f59f00; padding: 15px; border-radius: 10px; margin-top: 10px; margin-bottom: 10px; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -41,7 +41,7 @@ if st.session_state.etape == 1:
         "Autres": "SOCLE COMMUN"
     }
     for i, (label, socle_val) in enumerate(metiers.items()):
-        if st.button(label, key=f"m_{i}"):
+        if st.button(label, key=f"btn_metier_{i}"):
             st.session_state.choix['socle'] = socle_val
             st.session_state.etape = 2
             st.rerun()
@@ -51,16 +51,16 @@ elif st.session_state.etape == 2:
     st.markdown("<div class='question-box'><h3>2. Votre situation</h3><p>Souhaitez-vous consulter les règles de vie du contrat ou la fin du contrat ?</p></div>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Vie du contrat (Titre 1)"):
+        if st.button("Vie du contrat (Titre 1)", key="btn_t1"):
             st.session_state.choix['titre_filtre'] = "TITRE 1"
             st.session_state.etape = 3
             st.rerun()
     with col2:
-        if st.button("Fin du contrat (Titre 2)"):
+        if st.button("Fin du contrat (Titre 2)", key="btn_t2"):
             st.session_state.choix['titre_filtre'] = "TITRE 2"
             st.session_state.etape = 3
             st.rerun()
-    if st.button("⬅️ Retour"):
+    if st.button("⬅️ Retour", key="btn_ret_2"):
         st.session_state.etape = 1
         st.rerun()
 
@@ -72,17 +72,14 @@ elif st.session_state.etape == 3:
         query = "SELECT DISTINCT chapitres FROM convention_collective WHERE socle = ? AND titres LIKE ? AND chapitres IS NOT NULL"
         chapitres = conn.execute(query, (st.session_state.choix['socle'], f"{st.session_state.choix['titre_filtre']}%")).fetchall()
         
-        if not chapitres:
-            st.warning("Aucun chapitre trouvé.")
-        else:
-            for i, chap in enumerate(chapitres):
-                if st.button(chap['chapitres'], key=f"chap_{i}"):
-                    st.session_state.choix['chapitre_selectionne'] = chap['chapitres']
-                    st.session_state.etape = 4
-                    st.rerun()
+        for i, chap in enumerate(chapitres):
+            if st.button(chap['chapitres'], key=f"btn_chap_{i}"):
+                st.session_state.choix['chapitre_selectionne'] = chap['chapitres']
+                st.session_state.etape = 4
+                st.rerun()
     finally:
         conn.close()
-    if st.button("⬅️ Retour"):
+    if st.button("⬅️ Retour", key="btn_ret_3"):
         st.session_state.etape = 2
         st.rerun()
 
@@ -95,17 +92,17 @@ elif st.session_state.etape == 4:
         articles = conn.execute(query, (st.session_state.choix['socle'], st.session_state.choix['chapitre_selectionne'])).fetchall()
         
         for i, art in enumerate(articles):
-            if st.button(f"Article {art['numero_article_isole']} - {art['affichage_article']}", key=f"art_{i}"):
+            if st.button(f"Article {art['numero_article_isole']} - {art['affichage_article']}", key=f"btn_art_{i}"):
                 st.session_state.choix['article_id'] = art['numero_article_isole']
                 st.session_state.etape = 5
                 st.rerun()
     finally:
         conn.close()
-    if st.button("⬅️ Retour"):
+    if st.button("⬅️ Retour", key="btn_ret_4"):
         st.session_state.etape = 3
         st.rerun()
 
-# --- ÉTAPE 5 : AFFICHAGE FINAL AVEC LIEN VERS AUTRE ARTICLE ---
+# --- ÉTAPE 5 : AFFICHAGE FINAL AVEC CHAMP DE SAISIE ---
 elif st.session_state.etape == 5:
     art_id = st.session_state.choix['article_id']
     socle = st.session_state.choix['socle']
@@ -124,21 +121,34 @@ elif st.session_state.etape == 5:
         st.markdown("**⚖️ Texte Officiel :**")
         st.write(article['texte_integral'])
 
-        # --- DÉTECTION DU RENVOI (EX: ARTICLE 47) ---
-        # Cherche le numéro d'article mentionné dans le texte pour créer le lien
+        # --- DÉTECTION AUTOMATIQUE DE RENVOI ---
         mention = re.search(r"article\s+(\d+)", article['texte_integral'], re.IGNORECASE)
-        
         if mention:
             num_cible = mention.group(1)
-            # On n'affiche le lien que s'il est différent de l'article actuel
             if str(num_cible) != str(art_id):
                 st.markdown(f"<div class='renvoi-box'>🔗 Cet article renvoie à l'<b>Article {num_cible}</b>.</div>", unsafe_allow_html=True)
-                if st.button(f"👉 Aller à l'Article {num_cible}", key="btn_redirect"):
+                if st.button(f"👉 Aller à l'Article {num_cible}", key="btn_renvoi_auto"):
                     st.session_state.choix['article_id'] = num_cible
-                    st.session_state.choix['socle'] = "SOCLE COMMUN" # Les renvois sont souvent vers le socle commun
+                    st.session_state.choix['socle'] = "SOCLE COMMUN"
                     st.rerun()
+
+    st.markdown("---")
+
+    # --- NOUVEAU : CHAMP DE SAISIE POUR NAVIGUER VERS UN AUTRE ARTICLE ---
+    with st.form("nav_article"):
+        st.markdown("**🔍 Aller à un autre article :**")
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            new_art_id = st.text_input("Numéro de l'article", placeholder="Ex: 47", label_visibility="collapsed")
+        with col2:
+            submitted = st.form_submit_button("Go")
+        
+        if submitted and new_art_id:
+            st.session_state.choix['article_id'] = new_art_id
+            # On cherche par défaut dans le SOCLE COMMUN pour les recherches directes
+            st.session_state.choix['socle'] = "SOCLE COMMUN"
+            st.rerun()
     
-    # Bouton "Nouvelle recherche" placé en bas
-    if st.button("🔄 Nouvelle recherche"):
+    if st.button("🔄 Nouvelle recherche", key="btn_reset"):
         st.session_state.etape = 1
         st.rerun()
