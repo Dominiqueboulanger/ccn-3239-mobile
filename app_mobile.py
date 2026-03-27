@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="🛡️ Assistant CCN 3239", layout="centered")
+st.set_page_config(page_title="La CCN 3239", layout="centered")
 
 BASE_DIR = Path(__file__).parent
 DB_PATH = (BASE_DIR / "CCN_3239.db").resolve()
@@ -32,11 +32,11 @@ st.title("🛡️ Assistant CCN 3239")
 if st.session_state.etape == 1:
     st.markdown("<div class='question-box'><h3>1. Quel est votre métier ?</h3></div>", unsafe_allow_html=True)
     metiers = {
-        "🧸 Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
-        "👶 Assistant Parental (Garde d'enfants)": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR",
-        "👴 Assistant de Vie (Dépendance)": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR",
-        "🏠 Employé Familial": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR",
-        "🛠 Autres (Socle Commun)": "SOCLE COMMUN"
+        "Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
+        "Assistant Parental (Garde d'enfants)": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR",
+        "Assistant De Vie Dépendance": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR",
+        "Employé Familial": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR",
+        "Autres": "SOCLE COMMUN"
     }
     for label, socle_val in metiers.items():
         if st.button(label):
