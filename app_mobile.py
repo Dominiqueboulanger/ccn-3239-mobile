@@ -5,7 +5,7 @@ from pathlib import Path
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# Gestion des chemins (s'adapte à votre dossier)
+# Gestion des chemins
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "CCN_3239.db"
 
@@ -27,13 +27,6 @@ st.markdown("""
         white-space: normal;
         background-color: white;
     }
-    .question-box { 
-        background-color: #f8f9fa; 
-        padding: 20px; 
-        border-radius: 15px; 
-        border-left: 8px solid #1e3799; 
-        margin-bottom: 20px; 
-    }
     .essentiel-box { 
         background-color: #ecfdf5; 
         border-left: 5px solid #27ae60; 
@@ -43,10 +36,13 @@ st.markdown("""
         color: #065f46;
         margin-bottom: 10px;
     }
-    .titre-article {
+    .situation-box {
+        background-color: #f0f2f6;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
         font-weight: bold;
-        color: #1e3799;
-        margin-top: 15px;
+        margin-bottom: 15px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -61,18 +57,15 @@ st.write("---")
 
 conn = get_connection()
 
-# --- ÉTAPE 1 : CHOIX DE LA PROFESSION (5 Choix -> 3 Socles) ---
+# --- ÉTAPE 1 : CHOIX DE LA PROFESSION (VERROUILLÉE) ---
 if st.session_state.etape == 1:
     st.subheader("Quelle est votre profession ?")
     
-    
-    # 1. SOCLE : Assistant maternel
     if st.button("Assistant Maternel"):
         st.session_state.choix['socle'] = "Assistant maternel"
         st.session_state.etape = 2
         st.rerun()
         
-    # 2. SOCLE : Salarié du particulier employeur
     if st.button("Assistant Parental (Garde d'enfants)"):
         st.session_state.choix['socle'] = "Salarié du particulier employeur"
         st.session_state.etape = 2
@@ -88,13 +81,12 @@ if st.session_state.etape == 1:
         st.session_state.etape = 2
         st.rerun()
 
-    # 3. SOCLE : Socle commun
     if st.button("Autres"):
         st.session_state.choix['socle'] = "socle commun"
         st.session_state.etape = 2
         st.rerun()
 
-# --- ÉTAPE 2 : LE MOTIF (VIE DU CONTRAT VS RUPTURE) ---
+# --- ÉTAPE 2 : LE MOTIF (VERROUILLÉE) ---
 elif st.session_state.etape == 2:
     st.subheader("Envisagez-vous la fin de votre contrat ?")
     
@@ -114,29 +106,31 @@ elif st.session_state.etape == 2:
         st.session_state.etape = 1
         st.rerun()
 
-# --- ÉTAPE 3 : LISTE DES QUESTIONS (ARTICLES RACINES) ---
+# --- ÉTAPE 3 : LISTE DES QUESTIONS (FILTRAGE SQL) ---
 elif st.session_state.etape == 3:
-    st.subheader("Sélectionnez votre question :")
+    st.subheader("Quelle est votre question ?")
     
-    # On récupère les questions simplifiées depuis questions_app
-    # On filtre par le TITRE choisi à l'étape 2 et le SOCLE choisi à l'étape 1
+    # Commande SQL avec jointure pour filtrer par Socle et Titre
     query = """
         SELECT q.id, q.question_texte, c.numero_article_isole 
         FROM questions_app q
         JOIN convention_collective c ON q.id = c.id
-        WHERE c.titres LIKE ? AND c.socle = ?
+        WHERE c.socle = ? AND c.titres LIKE ?
     """
-    filtre_titre = f"%{st.session_state.choix['titre_filtre']}%"
-    socle_user = st.session_state.choix['socle']
     
-    questions = conn.execute(query, (filtre_titre, socle_user)).fetchall()
+    socle_user = st.session_state.choix['socle']
+    # On cherche "TITRE 1%" ou "TITRE 2%" selon la réponse à l'étape 2
+    filtre_titre = f"{st.session_state.choix['titre_filtre']}%"
+    
+    questions = conn.execute(query, (socle_user, filtre_titre)).fetchall()
 
     if not questions:
-        st.warning("Aucune question n'est encore disponible pour cette section.")
+        st.warning("Aucune question n'est encore répertoriée pour ce profil.")
     else:
         for q in questions:
+            # On affiche le texte de la question stocké dans la table questions_app
             if st.button(q['question_texte']):
-                # On stocke le numéro de l'article racine (ex: 41)
+                # On mémorise l'article racine pour l'étape 4
                 st.session_state.choix['article_racine'] = q['numero_article_isole']
                 st.session_state.etape = 4
                 st.rerun()
@@ -145,14 +139,14 @@ elif st.session_state.etape == 3:
         st.session_state.etape = 2
         st.rerun()
 
-# --- ÉTAPE 4 : RÉSULTAT (DÉPLOIEMENT DES ARTICLES LIÉS) ---
+# --- ÉTAPE 4 : RÉSULTAT (DÉPLOIEMENT ARBORESCENT) ---
 elif st.session_state.etape == 4:
     racine = st.session_state.choix['article_racine']
     socle_user = st.session_state.choix['socle']
     
-    st.subheader(f"Résultats pour : {racine}")
+    st.subheader(f"Détails : Article {racine}")
     
-    # Recherche l'article racine ET ses dérivés (ex: 41, 41-1, 41-2...)
+    # Sélectionne l'article racine ET ses sous-articles (41, 41-1, 41-2...)
     query = """
         SELECT numero_article_isole, affichage_article, texte_integral, texte_simplifie 
         FROM convention_collective 
@@ -165,16 +159,14 @@ elif st.session_state.etape == 4:
 
     if articles:
         for art in articles:
-            with st.expander(f"📄 Article {art['numero_article_isole']} - {art['affichage_article'][:60]}..."):
-                # Affichage de la version simplifiée
+            with st.expander(f"📄 Article {art['numero_article_isole']} - {art['affichage_article'][:50]}..."):
                 if art['texte_simplifie']:
                     st.markdown(f"<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{art['texte_simplifie']}</div>", unsafe_allow_html=True)
                 
-                # Affichage du texte intégral
                 st.markdown("**⚖️ Texte Officiel :**")
                 st.write(art['texte_integral'])
     else:
-        st.error("Désolé, aucun contenu n'a été trouvé pour cet article.")
+        st.error("Aucune donnée trouvée pour cet article.")
 
     if st.button("🔄 Nouvelle recherche"):
         st.session_state.etape = 1
