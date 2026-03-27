@@ -64,7 +64,7 @@ conn = get_connection()
 # --- ÉTAPE 1 : CHOIX DE LA PROFESSION (5 Choix -> 3 Socles) ---
 if st.session_state.etape == 1:
     st.subheader("Quelle est votre profession ?")
-    st.info("Votre métier détermine les règles de la convention qui s'appliquent à vous.")
+    
     
     # 1. SOCLE : Assistant maternel
     if st.button("👶 Assistant Maternel"):
@@ -78,7 +78,7 @@ if st.session_state.etape == 1:
         st.session_state.etape = 2
         st.rerun()
 
-    if st.button("👵 Assistant de Vie (Dépendance)"):
+    if st.button("👵 Assistant de Vie Dépendance"):
         st.session_state.choix['socle'] = "Salarié du particulier employeur"
         st.session_state.etape = 2
         st.rerun()
@@ -89,7 +89,7 @@ if st.session_state.etape == 1:
         st.rerun()
 
     # 3. SOCLE : Socle commun
-    if st.button("❓ Autres professions"):
+    if st.button("Autres"):
         st.session_state.choix['socle'] = "socle commun"
         st.session_state.etape = 2
         st.rerun()
