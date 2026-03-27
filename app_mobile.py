@@ -61,22 +61,38 @@ st.write("---")
 
 conn = get_connection()
 
-# --- ÉTAPE 1 : CHOIX DU SOCLE (PROFESSION) ---
+# --- ÉTAPE 1 : CHOIX DE LA PROFESSION (5 Choix -> 3 Socles) ---
 if st.session_state.etape == 1:
     st.subheader("Quelle est votre profession ?")
-    st.info("Le socle définit les règles qui s'appliquent à votre contrat.")
+    st.info("Votre métier détermine les règles de la convention qui s'appliquent à vous.")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("👶 Assistant\nMaternel"):
-            st.session_state.choix['socle'] = "Assistant maternel"
-            st.session_state.etape = 2
-            st.rerun()
-    with col2:
-        if st.button("🏠 Salarié du\nParticulier Employeur"):
-            st.session_state.choix['socle'] = "Salarié du particulier employeur"
-            st.session_state.etape = 2
-            st.rerun()
+    # 1. SOCLE : Assistant maternel
+    if st.button("👶 Assistant Maternel"):
+        st.session_state.choix['socle'] = "Assistant maternel"
+        st.session_state.etape = 2
+        st.rerun()
+        
+    # 2. SOCLE : Salarié du particulier employeur
+    if st.button("🧸 Assistant Parental (Garde d'enfants)"):
+        st.session_state.choix['socle'] = "Salarié du particulier employeur"
+        st.session_state.etape = 2
+        st.rerun()
+
+    if st.button("👵 Assistant de Vie (Dépendance)"):
+        st.session_state.choix['socle'] = "Salarié du particulier employeur"
+        st.session_state.etape = 2
+        st.rerun()
+
+    if st.button("🧹 Employé Familial (Ménage, cuisine...)"):
+        st.session_state.choix['socle'] = "Salarié du particulier employeur"
+        st.session_state.etape = 2
+        st.rerun()
+
+    # 3. SOCLE : Socle commun
+    if st.button("❓ Autres professions"):
+        st.session_state.choix['socle'] = "socle commun"
+        st.session_state.etape = 2
+        st.rerun()
 
 # --- ÉTAPE 2 : LE MOTIF (VIE DU CONTRAT VS RUPTURE) ---
 elif st.session_state.etape == 2:
