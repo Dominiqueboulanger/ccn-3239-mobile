@@ -5,7 +5,6 @@ from pathlib import Path
 # --- CONFIGURATION ---
 st.set_page_config(page_title="CCN 3239 - Parcours Apprenant", layout="centered")
 
-# Utilisation d'un chemin absolu pour éviter de lire une base vide
 BASE_DIR = Path(__file__).parent
 DB_PATH = (BASE_DIR / "CCN_3239.db").resolve()
 
@@ -29,29 +28,32 @@ if 'etape' not in st.session_state:
 
 st.title("🛡️ Assistant CCN 3239")
 
-# --- ÉTAPE 1 : MÉTIER (VERROUILLÉE) ---
+# --- ÉTAPE 1 : MÉTIER (Synchronisé avec la base) ---
 if st.session_state.etape == 1:
     st.subheader("1. Quel est votre métier ?")
+    
+    # Mapping précis avec les valeurs MAJUSCULES de votre base
     btns = {
-        "Assistant Maternel": "Assistant maternel",
-        "Assistant Parental (Garde d'enfants)": "Salarié du particulier employeur",
-        "Assistant de Vie Dépendance": "Salarié du particulier employeur",
-        "Employé Familial (Ménage...)": "Salarié du particulier employeur",
-        "Autres": "socle commun"
+        "Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
+        "Assistant Parental (Garde d'enfants)": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
+        "Assistant de Vie Dépendance": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
+        "Employé Familial": "SOCLE SALARIÉ DU PARTICULIER EMPLOYEUR",
+        "Autres": "SOCLE COMMUN"
     }
+    
     for label, val in btns.items():
         if st.button(label):
             st.session_state.choix['socle'] = val
             st.session_state.etape = 2
             st.rerun()
 
-# --- ÉTAPE 2 : SITUATION (VERROUILLÉE) ---
+# --- ÉTAPE 2 : SITUATION ---
 elif st.session_state.etape == 2:
     st.subheader("2. Envisagez-vous la fin de votre contrat ?")
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Non"):
-            st.session_state.choix['titre_filtre'] = "TITRE 1"
+            st.session_state.choix['titre_filtre'] = "TITRE 1" # Correspond au début de votre texte base
             st.session_state.etape = 3
             st.rerun()
     with col2:
@@ -69,7 +71,7 @@ elif st.session_state.etape == 3:
     
     conn = get_connection()
     try:
-        # La jointure se fait ici sur q.id = c.id
+        # Utilisation de LIKE avec % pour ignorer les espaces bizarres après TITRE 1
         query = """
             SELECT q.question_texte, c.numero_article_isole 
             FROM questions_app q
@@ -77,20 +79,21 @@ elif st.session_state.etape == 3:
             WHERE c.socle = ? AND c.titres LIKE ?
         """
         socle = st.session_state.choix['socle']
-        titre = f"{st.session_state.choix['titre_filtre']}%"
+        titre_pattern = f"{st.session_state.choix['titre_filtre']}%"
         
-        questions = conn.execute(query, (socle, titre)).fetchall()
+        questions = conn.execute(query, (socle, titre_pattern)).fetchall()
 
         if not questions:
-            st.warning("Aucune question trouvée pour ce profil.")
+            st.info(f"Recherche pour : {socle} et {st.session_state.choix['titre_filtre']}")
+            st.warning("Aucune question trouvée. Vérifiez que vos IDs sont bien liés pour ce socle.")
         else:
             for q in questions:
                 if st.button(q['question_texte']):
                     st.session_state.choix['article_racine'] = q['numero_article_isole']
                     st.session_state.etape = 4
                     st.rerun()
-    except sqlite3.Error as e:
-        st.error(f"Erreur technique : {e}")
+    except Exception as e:
+        st.error(f"Erreur : {e}")
     finally:
         conn.close()
     
@@ -106,14 +109,15 @@ elif st.session_state.etape == 4:
     st.subheader(f"Détails : Article {racine}")
     
     conn = get_connection()
+    # On cherche l'article et ses dérivés
     query = """
         SELECT numero_article_isole, affichage_article, texte_integral, texte_simplifie 
         FROM convention_collective 
         WHERE (numero_article_isole = ? OR numero_article_isole LIKE ?)
         AND socle = ?
-        ORDER BY numero_article_isole ASC
+        ORDER BY id ASC
     """
-    articles = conn.execute(query, (racine, f"{racine}-%", socle)).fetchall()
+    articles = conn.execute(query, (str(racine), f"{racine}-%", socle)).fetchall()
     conn.close()
 
     if articles:
@@ -121,7 +125,6 @@ elif st.session_state.etape == 4:
             with st.expander(f"📄 Article {art['numero_article_isole']}"):
                 if art['texte_simplifie']:
                     st.markdown(f"<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{art['texte_simplifie']}</div>", unsafe_allow_html=True)
-                st.markdown("**⚖️ Texte Officiel :**")
                 st.write(art['texte_integral'])
     
     if st.button("🔄 Nouvelle recherche"):
