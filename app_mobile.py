@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="La CCN 3239", layout="centered")
+st.set_page_config(page_title="Navigation CCN 3239", layout="centered")
 
 BASE_DIR = Path(__file__).parent
 DB_PATH = (BASE_DIR / "CCN_3239.db").resolve()
@@ -26,7 +26,7 @@ if 'etape' not in st.session_state:
     st.session_state.etape = 1
     st.session_state.choix = {}
 
-st.title("🛡️ Assistant CCN 3239")
+st.title("📂 Explorateur CCN 3239")
 
 # --- ÉTAPE 1 : MÉTIER ---
 if st.session_state.etape == 1:
@@ -46,15 +46,15 @@ if st.session_state.etape == 1:
 
 # --- ÉTAPE 2 : SITUATION ---
 elif st.session_state.etape == 2:
-    st.markdown("<div class='question-box'><h3>2. Votre situation</h3><p>Envisagez-vous la fin de votre contrat ?</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='question-box'><h3>2. Votre situation</h3><p>Souhaitez-vous consulter les règles de vie du contrat ou la fin du contrat ?</p></div>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Non"):
+        if st.button("Vie du contrat (Titre 1)"):
             st.session_state.choix['titre_filtre'] = "TITRE 1"
             st.session_state.etape = 3
             st.rerun()
     with col2:
-        if st.button("Oui"):
+        if st.button("Fin du contrat (Titre 2)"):
             st.session_state.choix['titre_filtre'] = "TITRE 2"
             st.session_state.etape = 3
             st.rerun()
@@ -62,60 +62,71 @@ elif st.session_state.etape == 2:
         st.session_state.etape = 1
         st.rerun()
 
-# --- ÉTAPE 3 : QUESTIONS ---
+# --- ÉTAPE 3 : LISTE DES CHAPITRES ---
 elif st.session_state.etape == 3:
-    st.markdown("<div class='question-box'><h3>3. Quel sujet vous questionne ?</h3></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='question-box'><h3>3. Choisissez un Chapitre</h3><p>Section : {st.session_state.choix['titre_filtre']}</p></div>", unsafe_allow_html=True)
     conn = get_connection()
     try:
-        query = "SELECT q.id, q.question_texte, c.numero_article_isole FROM questions_app q INNER JOIN convention_collective c ON q.id = c.id WHERE c.socle = ? AND c.titres LIKE ?"
-        questions = conn.execute(query, (st.session_state.choix['socle'], f"{st.session_state.choix['titre_filtre']}%")).fetchall()
-        if not questions:
-            st.warning("Aucune question trouvée.")
+        # On récupère les chapitres uniques pour ce socle et ce titre
+        query = "SELECT DISTINCT chapitres FROM convention_collective WHERE socle = ? AND titres LIKE ? AND chapitres IS NOT NULL"
+        chapitres = conn.execute(query, (st.session_state.choix['socle'], f"{st.session_state.choix['titre_filtre']}%")).fetchall()
+        
+        if not chapitres:
+            st.warning("Aucun chapitre trouvé pour cette sélection.")
         else:
-            for q in questions:
-                if st.button(q['question_texte'], key=f"q_{q['id']}"):
-                    st.session_state.choix['article_racine'] = q['numero_article_isole']
+            for i, chap in enumerate(chapitres):
+                nom_chap = chap['chapitres']
+                if st.button(nom_chap, key=f"chap_{i}"):
+                    st.session_state.choix['chapitre_selectionne'] = nom_chap
                     st.session_state.etape = 4
                     st.rerun()
     except Exception as e:
         st.error(f"Erreur : {e}")
     finally:
         conn.close()
-    if st.button("⬅️ Retour", key="back3"):
+    if st.button("⬅️ Retour"):
         st.session_state.etape = 2
         st.rerun()
 
-# --- ÉTAPE 4 : RÉSULTATS (AVEC AFFICHAGE DU TITRE DE L'ARTICLE) ---
+# --- ÉTAPE 4 : LISTE DES ARTICLES DU CHAPITRE ---
 elif st.session_state.etape == 4:
-    racine = st.session_state.choix['article_racine']
+    st.markdown(f"<div class='question-box'><h3>4. Choisissez un Article</h3><p>Dans : {st.session_state.choix['chapitre_selectionne']}</p></div>", unsafe_allow_html=True)
+    conn = get_connection()
+    try:
+        query = "SELECT numero_article_isole, affichage_article FROM convention_collective WHERE socle = ? AND chapitres = ? ORDER BY numero_article_isole ASC"
+        articles = conn.execute(query, (st.session_state.choix['socle'], st.session_state.choix['chapitre_selectionne'])).fetchall()
+        
+        for i, art in enumerate(articles):
+            label_art = f"Article {art['numero_article_isole']} - {art['affichage_article']}"
+            if st.button(label_art, key=f"art_btn_{i}"):
+                st.session_state.choix['article_id'] = art['numero_article_isole']
+                st.session_state.etape = 5
+                st.rerun()
+    finally:
+        conn.close()
+    if st.button("⬅️ Retour"):
+        st.session_state.etape = 3
+        st.rerun()
+
+# --- ÉTAPE 5 : AFFICHAGE FINAL ---
+elif st.session_state.etape == 5:
+    art_id = st.session_state.choix['article_id']
     socle = st.session_state.choix['socle']
     
     conn = get_connection()
-    # Ajout de 'affichage_article' dans la requête SQL
-    query = """
-        SELECT numero_article_isole, affichage_article, texte_integral, texte_simplifie 
-        FROM convention_collective 
-        WHERE (numero_article_isole = ? OR numero_article_isole LIKE ?)
-        AND socle = ?
-        ORDER BY numero_article_isole ASC
-    """
-    articles = conn.execute(query, (str(racine), f"{racine}-%", socle)).fetchall()
+    query = "SELECT * FROM convention_collective WHERE numero_article_isole = ? AND socle = ?"
+    article = conn.execute(query, (art_id, socle)).fetchone()
     conn.close()
 
-    if articles:
-        st.markdown(f"### 📖 Détails pour l'Article {racine}")
-        for art in articles:
-            # Construction d'un titre clair : "Article 41 - Le préavis"
-            titre_complet = f"📄 Article {art['numero_article_isole']} - {art['affichage_article']}"
-            
-            with st.expander(titre_complet):
-                if art['texte_simplifie']:
-                    st.markdown(f"<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{art['texte_simplifie']}</div>", unsafe_allow_html=True)
-                
-                st.markdown("**⚖️ Texte Officiel :**")
-                st.write(art['texte_integral'])
-    else:
-        st.error("Détails introuvables.")
+    if article:
+        st.markdown(f"### 📄 Article {article['numero_article_isole']}")
+        st.subheader(article['affichage_article'])
+        
+        if article['texte_simplifie']:
+            st.markdown(f"<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{article['texte_simplifie']}</div>", unsafe_allow_html=True)
+        
+        st.markdown("**⚖️ Texte Officiel :**")
+        st.write(article['texte_integral'])
     
     if st.button("🔄 Nouvelle recherche"):
         st.session_state.etape = 1
