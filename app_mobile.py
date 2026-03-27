@@ -70,7 +70,7 @@ if 'etape' not in st.session_state:
     st.session_state.etape = 1
     st.session_state.choix = {}
 
-st.title("🛡️ CCN 3239 Mobile")
+st.title("La CCN 3239 ")
 
 # --- LOGIQUE ÉTAPES 1 À 4 ---
 if st.session_state.etape == 1:
