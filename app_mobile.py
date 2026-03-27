@@ -32,7 +32,6 @@ st.title("🛡️ Assistant CCN 3239")
 if st.session_state.etape == 1:
     st.markdown("<div class='question-box'><h3>1. Quel est votre métier ?</h3></div>", unsafe_allow_html=True)
     
-    # On utilise l'orthographe EXACTE de votre base (avec le 'i' minuscule !)
     metiers = {
         "🧸 Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
         "👶 Assistant Parental (Garde d'enfants)": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR",
@@ -65,14 +64,15 @@ elif st.session_state.etape == 2:
         st.session_state.etape = 1
         st.rerun()
 
-# --- ÉTAPE 3 : QUESTIONS ---
+# --- ÉTAPE 3 : QUESTIONS (CORRECTION DU DOUBLON) ---
 elif st.session_state.etape == 3:
     st.markdown("<div class='question-box'><h3>3. Quel sujet vous questionne ?</h3></div>", unsafe_allow_html=True)
     
     conn = get_connection()
     try:
+        # On récupère l'ID pour créer une clé unique par bouton
         query = """
-            SELECT q.question_texte, c.numero_article_isole 
+            SELECT q.id, q.question_texte, c.numero_article_isole 
             FROM questions_app q
             INNER JOIN convention_collective c ON q.id = c.id
             WHERE c.socle = ? AND c.titres LIKE ?
@@ -86,7 +86,8 @@ elif st.session_state.etape == 3:
             st.warning("Aucune question trouvée.")
         else:
             for q in questions:
-                if st.button(q['question_texte']):
+                # Ajout d'une 'key' unique basée sur l'ID de la question pour éviter l'erreur Duplicate Widget ID
+                if st.button(q['question_texte'], key=f"btn_{q['id']}"):
                     st.session_state.choix['article_racine'] = q['numero_article_isole']
                     st.session_state.etape = 4
                     st.rerun()
@@ -95,7 +96,7 @@ elif st.session_state.etape == 3:
     finally:
         conn.close()
     
-    if st.button("⬅️ Retour"):
+    if st.button("⬅️ Retour", key="retour_etape3"):
         st.session_state.etape = 2
         st.rerun()
 
@@ -115,7 +116,7 @@ elif st.session_state.etape == 4:
     conn.close()
 
     if articles:
-        for art in articles:
+        for i, art in enumerate(articles):
             with st.expander(f"📄 Article {art['numero_article_isole']}"):
                 if art['texte_simplifie']:
                     st.markdown(f"<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{art['texte_simplifie']}</div>", unsafe_allow_html=True)
