@@ -96,16 +96,16 @@ if st.session_state.etape == 1:
 
 # --- ÉTAPE 2 : LE MOTIF (VIE DU CONTRAT VS RUPTURE) ---
 elif st.session_state.etape == 2:
-    st.subheader("Quel est l'objet de votre recherche ?")
+    st.subheader("Envisagez-vous la fin de votre contrat ?")
     
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🌱 La vie de mon contrat\n(Embauche, travail, congés)"):
+        if st.button("Non"):
             st.session_state.choix['titre_filtre'] = "TITRE 1"
             st.session_state.etape = 3
             st.rerun()
     with col2:
-        if st.button("🛑 La fin de mon contrat\n(Démission, licenciement)"):
+        if st.button("Oui"):
             st.session_state.choix['titre_filtre'] = "TITRE 2"
             st.session_state.etape = 3
             st.rerun()
