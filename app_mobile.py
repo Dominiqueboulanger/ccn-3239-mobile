@@ -48,13 +48,25 @@ def export_pdf(article_num, titre, essentiel, integral):
 # --- STYLE CSS ADAPTÉ SMARTPHONE ---
 st.markdown("""
     <style>
-    /* Boutons plus larges pour le pouce */
-    .stButton>button { width: 100%; border-radius: 15px; min-height: 4em; font-size: 16px !important; font-weight: bold; margin-bottom: 12px; border: 2px solid #1e3799; background-color: white; }
+    /* Boutons larges avec support pour textes longs */
+    .stButton>button { 
+        width: 100%; 
+        border-radius: 15px; 
+        min-height: 4em; 
+        font-size: 16px !important; 
+        font-weight: bold; 
+        margin-bottom: 12px; 
+        border: 2px solid #1e3799; 
+        background-color: white;
+        white-space: normal !important; /* Autorise le retour à la ligne */
+        text-align: left !important;   /* Aligne le texte à gauche pour la lecture */
+        padding: 10px 20px !important;
+    }
     .question-box { background-color: #f8f9fa; padding: 15px; border-radius: 15px; border-left: 8px solid #1e3799; margin-bottom: 20px; }
     .essentiel-box { background-color: #ecfdf5; border-left: 5px solid #27ae60; padding: 15px; border-radius: 10px; color: #065f46; margin-bottom: 10px; }
     .renvoi-box { background-color: #fff9db; border: 2px dashed #f59f00; padding: 15px; border-radius: 10px; margin-top: 10px; margin-bottom: 10px; text-align: center; }
     /* Bouton PDF Rouge pour mobile */
-    .stDownloadButton>button { background-color: #d63031 !important; color: white !important; border: none !important; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); }
+    .stDownloadButton>button { background-color: #d63031 !important; color: white !important; border: none !important; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: center !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -62,7 +74,7 @@ if 'etape' not in st.session_state:
     st.session_state.etape = 1
     st.session_state.choix = {}
 
-st.title("🛡️ CCN 3239 Mobile")
+st.title(" CCN 3239 ")
 
 # --- LOGIQUE ÉTAPES 1 À 4 ---
 if st.session_state.etape == 1:
@@ -93,9 +105,16 @@ elif st.session_state.etape == 3:
 elif st.session_state.etape == 4:
     st.markdown("### 📄 Articles")
     conn = get_connection()
+    # On récupère le numéro (pour la suite) et l'affichage (pour le bouton)
     arts = conn.execute("SELECT numero_article_isole, affichage_article FROM convention_collective WHERE socle = ? AND chapitres = ? ORDER BY numero_article_isole ASC", (st.session_state.choix['socle'], st.session_state.choix['chapitre'])).fetchall()
+    
     for i, a in enumerate(arts):
-        if st.button(f"Art. {a['numero_article_isole']}", key=f"a_{i}"): st.session_state.choix['article_id'] = a['numero_article_isole']; st.session_state.etape = 5; st.rerun()
+        # On utilise affichage_article comme libellé du bouton
+        if st.button(a['affichage_article'], key=f"a_{i}"): 
+            st.session_state.choix['article_id'] = a['numero_article_isole']
+            st.session_state.etape = 5
+            st.rerun()
+            
     conn.close()
     if st.button("⬅️ Retour", key="r_4"): st.session_state.etape = 3; st.rerun()
 
@@ -113,7 +132,7 @@ elif st.session_state.etape == 5:
         st.info(article['affichage_article'])
         
         if article['texte_simplifie']:
-            st.markdown(f"<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{article['texte_simplifie']}</div>", unsafe_allow_html=True)
+            st.markdown(f<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{article['texte_simplifie']}</div>, unsafe_allow_html=True)
         
         st.write(article['texte_integral'])
 
