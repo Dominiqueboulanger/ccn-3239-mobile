@@ -1,11 +1,10 @@
 import streamlit as st
 import sqlite3
-import re
 from pathlib import Path
 from fpdf import FPDF
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="Navigation CCN 3239", layout="centered")
+st.set_page_config(page_title="Assistant CCN 3239", layout="centered", page_icon="🛡️")
 
 BASE_DIR = Path(__file__).parent
 DB_PATH = (BASE_DIR / "CCN_3239.db").resolve()
@@ -15,137 +14,170 @@ def get_connection():
     conn.row_factory = sqlite3.Row 
     return conn
 
-# --- FONCTION GÉNÉRATION PDF OPTIMISÉE MOBILE ---
-def export_pdf(article_num, titre, essentiel, integral):
-    pdf = FPDF()
+# --- FONCTION EXPORT PDF ---
+class PDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, 'Fiche Pratique - Convention Collective 3239', 0, 1, 'C')
+        self.ln(5)
+
+def generer_pdf(titre, essentiel, texte_loi):
+    pdf = PDF()
     pdf.add_page()
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, f"Article {article_num}", ln=True, align='C')
-    pdf.ln(5)
     
-    pdf.set_font("Helvetica", "B", 12)
+    # Titre de l'article
+    pdf.set_font("Arial", 'B', 14)
     pdf.multi_cell(0, 10, titre.encode('latin-1', 'replace').decode('latin-1'))
     pdf.ln(5)
     
-    if essentiel:
-        pdf.set_fill_color(240, 240, 240)
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 10, "L'ESSENTIEL :", ln=True, fill=True)
-        pdf.set_font("Helvetica", "", 10)
-        clean_essentiel = essentiel.replace("<b>", "").replace("</b>", "").replace("<br>", "\n")
-        pdf.multi_cell(0, 7, clean_essentiel.encode('latin-1', 'replace').decode('latin-1'), fill=True)
-        pdf.ln(10)
+    # Section Essentiel
+    pdf.set_fill_color(236, 253, 245) # Vert clair
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, " L'ESSENTIEL :", 0, 1, 'L', fill=True)
+    pdf.set_font("Arial", '', 11)
+    pdf.multi_cell(0, 8, essentiel.encode('latin-1', 'replace').decode('latin-1'))
+    pdf.ln(10)
     
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(0, 10, "TEXTE OFFICIEL :", ln=True)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.multi_cell(0, 7, integral.encode('latin-1', 'replace').decode('latin-1'))
+    # Section Texte de loi
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, " TEXTE OFFICIEL :", 0, 1, 'L')
+    pdf.set_font("Arial", '', 9)
+    pdf.multi_cell(0, 6, texte_loi.encode('latin-1', 'replace').decode('latin-1'))
     
-    return pdf.output(dest='S').encode('latin-1', 'replace')
+    return pdf.output(dest='S')
 
-# --- STYLE CSS ADAPTÉ SMARTPHONE ---
+# --- STYLE CSS ---
 st.markdown("""
     <style>
-    .stButton>button { 
-        width: 100%; 
-        border-radius: 15px; 
-        min-height: 4em; 
-        font-size: 16px !important; 
-        font-weight: bold; 
-        margin-bottom: 12px; 
-        border: 2px solid #1e3799; 
-        background-color: white;
-        white-space: normal !important; 
-        text-align: left !important;   
-        padding: 10px 20px !important;
-    }
-    .question-box { background-color: #f8f9fa; padding: 15px; border-radius: 15px; border-left: 8px solid #1e3799; margin-bottom: 20px; }
+    .stButton>button { width: 100%; border-radius: 12px; min-height: 3.8em; font-weight: bold; margin-bottom: 10px; border: 2px solid #1e3799; background-color: white; color: #1e3799; }
+    .stButton>button:hover { background-color: #1e3799; color: white; }
+    .question-box { background-color: #f8f9fa; padding: 20px; border-radius: 15px; border-left: 8px solid #1e3799; margin-bottom: 20px; }
     .essentiel-box { background-color: #ecfdf5; border-left: 5px solid #27ae60; padding: 15px; border-radius: 10px; color: #065f46; margin-bottom: 10px; }
-    .renvoi-box { background-color: #fff9db; border: 2px dashed #f59f00; padding: 15px; border-radius: 10px; margin-top: 10px; margin-bottom: 10px; text-align: center; }
-    .stDownloadButton>button { background-color: #d63031 !important; color: white !important; border: none !important; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); text-align: center !important; }
+    .racine-box { background-color: #fff5f5; border-left: 5px solid #c0392b; padding: 15px; border-radius: 10px; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
+# --- GESTION DE LA NAVIGATION ---
 if 'etape' not in st.session_state:
     st.session_state.etape = 1
     st.session_state.choix = {}
 
-st.title("La CCN 3239 ")
+st.title("🛡️ Assistant CCN 3239")
 
-# --- LOGIQUE ÉTAPES 1 À 4 ---
+# --- ÉTAPE 1 : CHOIX DU MÉTIER ---
 if st.session_state.etape == 1:
-    st.markdown("<div class='question-box'><h3>1. Votre métier ?</h3></div>", unsafe_allow_html=True)
-    metiers = {"Assistant Maternel": "SOCLE ASSISTANT MATERNEL", "Garde d'enfants": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR", "Assistant De Vie": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR", "Employé Familial": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR", "Autres": "SOCLE COMMUN"}
-    for i, (label, socle_val) in enumerate(metiers.items()):
-        if st.button(label, key=f"m_{i}"):
-            st.session_state.choix['socle'] = socle_val; st.session_state.etape = 2; st.rerun()
-
-elif st.session_state.etape == 2:
-    st.markdown("<div class='question-box'><h3>2. Votre situation</h3></div>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Vie du contrat", key="v_c"): st.session_state.choix['titre_filtre'] = "TITRE 1"; st.session_state.etape = 3; st.rerun()
-    with c2:
-        if st.button("Fin du contrat", key="f_c"): st.session_state.choix['titre_filtre'] = "TITRE 2"; st.session_state.etape = 3; st.rerun()
-    if st.button("⬅️ Retour", key="r_2"): st.session_state.etape = 1; st.rerun()
-
-elif st.session_state.etape == 3:
-    st.markdown("### 📑 Chapitres")
-    conn = get_connection()
-    chaps = conn.execute("SELECT DISTINCT chapitres FROM convention_collective WHERE socle = ? AND titres LIKE ?", (st.session_state.choix['socle'], f"{st.session_state.choix['titre_filtre']}%")).fetchall()
-    for i, c in enumerate(chaps):
-        if st.button(c['chapitres'], key=f"c_{i}"): st.session_state.choix['chapitre'] = c['chapitres']; st.session_state.etape = 4; st.rerun()
-    conn.close()
-    if st.button("⬅️ Retour", key="r_3"): st.session_state.etape = 2; st.rerun()
-
-elif st.session_state.etape == 4:
-    st.markdown("### 📄 Articles")
-    conn = get_connection()
-    arts = conn.execute("SELECT numero_article_isole, affichage_article FROM convention_collective WHERE socle = ? AND chapitres = ? ORDER BY numero_article_isole ASC", (st.session_state.choix['socle'], st.session_state.choix['chapitre'])).fetchall()
-    for i, a in enumerate(arts):
-        if st.button(a['affichage_article'], key=f"a_{i}"): 
-            st.session_state.choix['article_id'] = a['numero_article_isole']
-            st.session_state.etape = 5
+    st.markdown("<div class='question-box'><h3>1. Quel est votre métier ?</h3></div>", unsafe_allow_html=True)
+    metiers = {
+        "Assistant Maternel": "SOCLE ASSISTANT MATERNEL",
+        "Garde d'enfants / Assistant Parental": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR",
+        "Assistant De Vie / Employé Familial": "SOCLE SALARiÉ DU PARTICULIER EMPLOYEUR",
+        "Autres / Entreprise": "SOCLE COMMUN"
+    }
+    for label, socle_val in metiers.items():
+        if st.button(label):
+            st.session_state.choix['socle'] = socle_val
+            st.session_state.etape = 2
             st.rerun()
-    conn.close()
-    if st.button("⬅️ Retour", key="r_4"): st.session_state.etape = 3; st.rerun()
 
-# --- ÉTAPE 5 : AFFICHAGE + PDF + RECHERCHE ---
-elif st.session_state.etape == 5:
-    art_id = st.session_state.choix['article_id']
-    socle = st.session_state.choix['socle']
+# --- ÉTAPE 2 : FILTRE PAR TITRE ---
+elif st.session_state.etape == 2:
+    st.markdown("<div class='question-box'><h3>2. Votre situation</h3><p>Le sujet concerne-t-il la fin de votre contrat ?</p></div>", unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Non (Vie du contrat)"):
+            st.session_state.choix['titre_filtre'] = "TITRE 1"
+            st.session_state.etape = 3
+            st.rerun()
+    with col2:
+        if st.button("Oui (Rupture)"):
+            st.session_state.choix['titre_filtre'] = "TITRE 2"
+            st.session_state.etape = 3
+            st.rerun()
+    if st.button("⬅️ Retour"):
+        st.session_state.etape = 1
+        st.rerun()
+
+# --- ÉTAPE 3 : CHOIX DE LA QUESTION ---
+elif st.session_state.etape == 3:
+    st.markdown("<div class='question-box'><h3>3. Quel sujet vous questionne ?</h3></div>", unsafe_allow_html=True)
     conn = get_connection()
-    article = conn.execute("SELECT * FROM convention_collective WHERE numero_article_isole = ? AND socle = ?", (art_id, socle)).fetchone()
-    conn.close()
-
-    if article:
-        st.markdown(f"### Article {article['numero_article_isole']}")
-        st.info(article['affichage_article'])
+    try:
+        query = """
+            SELECT q.id, q.question_texte, c.numero_article_isole 
+            FROM questions_app q 
+            INNER JOIN convention_collective c ON q.id = c.id 
+            WHERE c.socle = ? AND c.titres LIKE ?
+        """
+        questions = conn.execute(query, (st.session_state.choix['socle'], f"{st.session_state.choix['titre_filtre']}%")).fetchall()
         
-        if article['texte_simplifie']:
-            # Correction ici : Ajout des guillemets manquants
-            st.markdown(f"<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{article['texte_simplifie']}</div>", unsafe_allow_html=True)
-        
-        st.write(article['texte_integral'])
-
-        pdf_bytes = export_pdf(article['numero_article_isole'], article['affichage_article'], article['texte_simplifie'], article['texte_integral'])
-        st.download_button(label="📥 Télécharger en PDF", data=pdf_bytes, file_name=f"Art_{article['numero_article_isole']}.pdf", mime="application/pdf")
-
-        mention = re.search(r"article\s+(\d+)", article['texte_integral'], re.IGNORECASE)
-        if mention and mention.group(1) != str(art_id):
-            num = mention.group(1)
-            st.markdown(f"<div class='renvoi-box'>🔗 Renvoi vers l'<b>Article {num}</b></div>", unsafe_allow_html=True)
-            if st.button(f"👉 Aller à l'Article {num}", key="r_auto"):
-                st.session_state.choix['article_id'] = num; st.session_state.choix['socle'] = "SOCLE COMMUN"; st.rerun()
-
-    st.markdown("---")
-    with st.form("nav"):
-        st.markdown("**🔍 Accès direct :**")
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            n_id = st.text_input("N° Article", placeholder="Ex: 47", label_visibility="collapsed")
-        with col2:
-            if st.form_submit_button("Go"):
-                st.session_state.choix['article_id'] = n_id; st.session_state.choix['socle'] = "SOCLE COMMUN"; st.rerun()
+        if not questions:
+            st.warning("Aucune question pré-enregistrée pour cette section.")
+            if st.button("Poser une question libre"):
+                st.session_state.etape = 4
+                st.session_state.choix['article_source'] = "LIBRE"
+                st.rerun()
+        else:
+            for q in questions:
+                if st.button(q['question_texte'], key=f"q_{q['id']}"):
+                    st.session_state.choix['article_source'] = q['numero_article_isole']
+                    st.session_state.etape = 4
+                    st.rerun()
+    finally:
+        conn.close()
     
-    if st.button("🔄 Nouvelle recherche", key="reset"): st.session_state.etape = 1; st.rerun()
+    if st.button("⬅️ Retour"):
+        st.session_state.etape = 2
+        st.rerun()
+
+# --- ÉTAPE 4 : AFFICHAGE DES RÉSULTATS & MAPPING ---
+elif st.session_state.etape == 4:
+    art_source = st.session_state.choix['article_source']
+    socle = st.session_state.choix['socle']
+    
+    if art_source == "LIBRE":
+        st.info("Module IA en cours de déploiement...")
+    else:
+        conn = get_connection()
+        # 1. On récupère l'article métier principal
+        res = conn.execute("SELECT * FROM convention_collective WHERE numero_article_isole = ? AND socle = ?", (str(art_source), socle)).fetchone()
+        
+        if res:
+            st.markdown(f"### 📄 {res['affichage_article']}")
+            
+            # Affichage de l'essentiel (texte simplifié)
+            if res['texte_simplifie']:
+                st.markdown(f"<div class='essentiel-box'><b>💡 L'ESSENTIEL :</b><br>{res['texte_simplifie']}</div>", unsafe_allow_html=True)
+            
+            # 2. RECHERCHE DU MAPPING (Lien vers la règle racine)
+            mapping = conn.execute("""
+                SELECT c.texte_integral, c.numero_article_isole, c.affichage_article
+                FROM mapping_articles m
+                JOIN convention_collective c ON m.article_commun = c.numero_article_isole
+                WHERE m.article_source = ? AND m.socle_source = ? AND c.socle = 'SOCLE COMMUN'
+            """, (str(art_source), socle)).fetchone()
+
+            if mapping:
+                with st.expander(f"🔗 Voir la règle générale (Art. {mapping['numero_article_isole']})"):
+                    st.markdown(f"<div class='racine-box'><b>Rappel du socle commun :</b><br><br>{mapping['texte_integral']}</div>", unsafe_allow_html=True)
+
+            # 3. Texte intégral métier
+            with st.expander("⚖️ Voir le texte officiel complet"):
+                st.write(res['texte_integral'])
+
+            # --- BOUTON EXPORT PDF ---
+            st.write("---")
+            pdf_bytes = generer_pdf(res['affichage_article'], res['texte_simplifie'] or "Consultez le texte intégral.", res['texte_integral'])
+            st.download_button(
+                label="📥 Télécharger ce mémo en PDF",
+                data=pdf_bytes,
+                file_name=f"Memo_Art_{art_source}.pdf",
+                mime="application/pdf"
+            )
+            
+        else:
+            st.error("Détails de l'article introuvables dans la base.")
+        conn.close()
+
+    if st.button("🔄 Nouvelle recherche"):
+        st.session_state.etape = 1
+        st.rerun()
