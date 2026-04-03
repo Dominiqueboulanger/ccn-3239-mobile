@@ -1,68 +1,92 @@
 import streamlit as st
 import sqlite3
 
-# Configuration pour un affichage mobile optimal
 st.set_page_config(page_title="Guide CCN 3239", layout="centered")
 
-def get_connection():
-    conn = sqlite3.connect("CCN_3239.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+# --- STYLE PERSONNALISÉ POUR MOBILE ---
+st.markdown("""
+    <style>
+    div.stButton > button {
+        width: 100%;
+        height: 60px;
+        font-size: 18px;
+        margin-bottom: 10px;
+        border-radius: 10px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-st.title("📖 Mon Assistant CCN 3239")
-st.write("Trouvez une réponse simple à vos questions sur la convention collective.")
+st.title("⚖️ Mon Assistant CCN 3239")
 
-conn = get_connection()
-cursor = conn.cursor()
+# --- INITIALISATION DES ÉTAPES ---
+if 'etape' not in st.session_state:
+    st.session_state.etape = 1
+    st.session_state.socle = None
 
-# --- ÉTAPE 1 : CHOIX DU THÈME ---
-# On récupère la liste des thèmes uniques de la table questions_app
-cursor.execute("SELECT DISTINCT theme FROM questions_app ORDER BY theme")
-themes = [row['theme'] for row in cursor.fetchall()]
-
-theme_choisi = st.selectbox("📂 Choisissez un thème :", ["--- Sélectionner ---"] + themes)
-
-if theme_choisi != "--- Sélectionner ---":
+# --- ÉTAPE 1 : LE MÉTIER ---
+if st.session_state.etape == 1:
+    st.subheader("1️⃣ Quel est votre métier ?")
     
-    # --- ÉTAPE 2 : CHOIX DE LA QUESTION ---
-    # On filtre les questions selon le thème choisi
-    cursor.execute("SELECT id, question_claire, article_id FROM questions_app WHERE theme = ?", (theme_choisi,))
-    questions = cursor.fetchall()
-    
-    # Affichage sous forme de boutons ou de liste
-    st.subheader("❓ Quelle est votre question ?")
-    
-    # On crée un dictionnaire pour lier le texte de la question à l'ID de l'article
-    dict_questions = {q['question_claire']: q['article_id'] for q in questions}
-    
-    question_selectionnee = st.radio(
-        "Sélectionnez la question qui vous intéresse :",
-        options=list(dict_questions.keys())
-    )
-
-    if question_selectionnee:
-        art_id = dict_questions[question_selectionnee]
-        
-        # --- ÉTAPE 3 : AFFICHAGE DE L'ARTICLE ---
-        # On va chercher les détails dans la table principale convention_collective
-        cursor.execute("SELECT * FROM convention_collective WHERE id = ?", (art_id,))
-        article = cursor.fetchone()
-        
-        if article:
-            st.divider()
-            st.success(f"### ✅ Réponse : {article['affichage_article']}")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🍼 Assistant Maternel"):
+            st.session_state.socle = "AM" # Articles 89-126
+            st.session_state.etape = 2
+            st.rerun()
+        if st.button("🏠 Employé Familial"):
+            st.session_state.socle = "EF" # Articles 126-168
+            st.session_state.etape = 2
+            st.rerun()
             
-            # Affichage de la version simplifiée en priorité
-            st.markdown("#### 💡 Ce qu'il faut retenir :")
-            st.info(article['texte_simplifie'])
-            
-            # Texte officiel caché par défaut (pour ne pas surcharger l'écran)
-            with st.expander("⚖️ Voir le texte officiel (Loi)"):
-                st.write(article['texte_integral'])
-        else:
-            st.error("Désolé, les détails de cet article ne sont pas encore disponibles.")
+    with col2:
+        if st.button("👵 Assistant de Vie"):
+            st.session_state.socle = "PE" # Particulier Employeur
+            st.session_state.etape = 2
+            st.rerun()
+        if st.button("🌳 Autres (Jardinier...)"):
+            st.session_state.socle = "SC" # Socle Commun
+            st.session_state.etape = 2
+            st.rerun()
 
-conn.close()
+# --- ÉTAPE 2 : LA SITUATION ---
+elif st.session_state.etape == 2:
+    st.subheader("2️⃣ Votre situation")
+    st.info(f"Métier sélectionné : {st.session_state.socle}")
+    
+    if st.button("🛑 Souhaitez-vous mettre fin au contrat ?"):
+        st.session_state.etape = 3 # Vers Rupture
+        st.rerun()
+    
+    if st.button("📝 Question sur l'exécution du contrat"):
+        st.session_state.etape = 10 # Vers thèmes classiques (Exécution)
+        st.rerun()
+    
+    if st.button("⬅️ Retour"):
+        st.session_state.etape = 1
+        st.rerun()
 
-# --- PIED DE PAGE ---
-st.caption("Application pédagogique pour les apprenants du secteur des particuliers employeurs.")
+# --- ÉTAPE 3 : TYPE DE CONTRAT (Si rupture) ---
+elif st.session_state.etape == 3:
+    st.subheader("3️⃣ Type de contrat")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📄 CDI"):
+            st.session_state.type_contrat = "CDI"
+            st.session_state.etape = 4
+            st.rerun()
+    with col2:
+        if st.button("⏳ CDD"):
+            # Ici, redirection directe vers l'article CDD (ex: 62 pour Socle Commun)
+            st.session_state.target_article = 62 
+            st.session_state.etape = "FINAL"
+            st.rerun()
+
+# --- ÉTAPE FINALE : AFFICHAGE ---
+elif st.session_state.etape == "FINAL":
+    # Logique SQL pour aller chercher l'article target_article
+    st.success("Voici l'article correspondant à votre situation :")
+    # Affichage de l'article...
+    if st.button("🔄 Recommencer"):
+        st.session_state.clear()
+        st.rerun()
