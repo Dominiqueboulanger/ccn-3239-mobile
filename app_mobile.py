@@ -5,7 +5,7 @@ import os
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# Design adapté au mobile et à la barre latérale
+# Design optimisé
 st.markdown("""
     <style>
     div.stButton > button {
@@ -17,7 +17,11 @@ st.markdown("""
         background-color: #FFFFFF;
         border: 2px solid #E0E0E0;
     }
-    .stSuccess { border-radius: 15px; }
+    /* Style pour le champ de saisie */
+    .stTextInput > div > div > input {
+        height: 50px;
+        font-size: 18px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -26,11 +30,9 @@ def get_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# --- FONCTION D'AFFICHAGE D'UN DOSSIER D'ARTICLES ---
 def afficher_dossier_article(num_racine):
     conn = get_connection()
     cursor = conn.cursor()
-    # On cherche l'article et ses sous-sections (ex: 47, 47-1...)
     cursor.execute("""
         SELECT * FROM convention_collective 
         WHERE numero_article_isole = ? 
@@ -51,93 +53,107 @@ def afficher_dossier_article(num_racine):
                     st.write(art['texte_integral'])
                 st.divider()
     else:
-        st.error(f"L'article {num_racine} n'a pas été trouvé dans la base.")
+        st.error(f"L'article {num_racine} n'a pas été trouvé.")
 
-# --- BARRE LATÉRALE (RECHERCHE DIRECTE) ---
-with st.sidebar:
-    st.title("🔍 Accès Direct")
-    art_direct = st.text_input("Numéro d'article (ex: 139)")
-    if st.button("Aller à l'article"):
-        if art_direct:
-            st.session_state.step = "DIRECT"
-            st.session_state.art_cible = art_direct
-            st.rerun()
-    
-    st.divider()
-    if st.button("🏠 Retour à l'accueil"):
-        st.session_state.step = 1
-        st.session_state.choix = {}
-        st.rerun()
-
-# --- GESTION DE LA NAVIGATION PRINCIPALE ---
+# --- INITIALISATION ---
 if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.choix = {}
 
-def valider_etape(valeur, nom_cle):
-    st.session_state.choix[nom_cle] = valeur
-    st.session_state.step += 1
-    st.rerun()
+# --- HAUT DE PAGE : RECHERCHE RAPIDE (Visible sur iPhone) ---
+st.title("⚖️ Guide CCN 3239")
 
-# --- INTERFACE PRINCIPALE ---
+with st.expander("🔍 Recherche directe par n° d'article"):
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        art_direct = st.text_input("Ex: 139", key="search_input", label_visibility="collapsed")
+    with col2:
+        if st.button("Aller"):
+            if art_direct:
+                st.session_state.step = "DIRECT"
+                st.session_state.art_cible = art_direct
+                st.rerun()
 
-# MODE RECHERCHE DIRECTE
+if st.session_state.step != 1:
+    if st.button("🏠 Retour à l'accueil principal"):
+        st.session_state.step = 1
+        st.session_state.choix = {}
+        st.rerun()
+
+st.divider()
+
+# --- LOGIQUE DE L'ENTONNOIR ---
+
+# MODE DIRECT
 if st.session_state.step == "DIRECT":
-    st.title(f"📖 Consultation Directe")
     afficher_dossier_article(st.session_state.art_cible)
 
-# MODE ENTONNOIR (ÉTAPES 1 À 6)
+# NIVEAU 1
 elif st.session_state.step == 1:
-    st.title("⚖️ Votre Guide CCN")
     st.subheader("1️⃣ Quel est votre métier ?")
-    metiers = {"🍼 Assistant Maternel": "art_am", "🏠 Employé Familial": "art_ef", 
-               "👵 Assistant de Vie": "art_ef", "🌳 Autres": "art_sc"}
+    metiers = {"🍼 Assistant Maternel": "art_am", "🏠 Employé Familial": "art_ef", "👵 Assistant de Vie": "art_ef", "🌳 Autres": "art_sc"}
     for label, col in metiers.items():
-        if st.button(label): valider_etape(col, 'colonne_metier')
+        if st.button(label):
+            st.session_state.choix['colonne_metier'] = col
+            st.session_state.step = 2
+            st.rerun()
 
+# NIVEAU 2 (Vie ou Fin)
 elif st.session_state.step == 2:
     st.subheader("2️⃣ Quel est le moment ?")
     conn = get_connection(); cursor = conn.cursor()
     cursor.execute("SELECT DISTINCT etape_vie FROM questions_app"); etapes = [r[0] for r in cursor.fetchall()]; conn.close()
     for e in etapes:
-        if st.button(e): valider_etape(e, 'etape_vie')
-    if st.button("⬅️ Retour"): st.session_state.step -= 1; st.rerun()
+        if st.button(e):
+            st.session_state.choix['etape_vie'] = e
+            st.session_state.step = 3
+            st.rerun()
+    if st.button("⬅️ Retour"): st.session_state.step = 1; st.rerun()
 
+# NIVEAU 3 (Famille)
 elif st.session_state.step == 3:
     st.subheader("3️⃣ Choisissez une catégorie")
     conn = get_connection(); cursor = conn.cursor()
     cursor.execute("SELECT DISTINCT famille FROM questions_app WHERE etape_vie = ?", (st.session_state.choix['etape_vie'],))
     familles = [r[0] for r in cursor.fetchall()]; conn.close()
     for f in familles:
-        if st.button(f): valider_etape(f, 'famille')
-    if st.button("⬅️ Retour"): st.session_state.step -= 1; st.rerun()
+        if st.button(f):
+            st.session_state.choix['famille'] = f
+            st.session_state.step = 4
+            st.rerun()
+    if st.button("⬅️ Retour"): st.session_state.step = 2; st.rerun()
 
+# NIVEAU 4 (Thème)
 elif st.session_state.step == 4:
     st.subheader("4️⃣ Précisez votre sujet")
     conn = get_connection(); cursor = conn.cursor()
     cursor.execute("SELECT DISTINCT theme FROM questions_app WHERE famille = ?", (st.session_state.choix['famille'],))
     themes = [r[0] for r in cursor.fetchall()]; conn.close()
     for t in themes:
-        if st.button(t): valider_etape(t, 'theme')
-    if st.button("⬅️ Retour"): st.session_state.step -= 1; st.rerun()
+        if st.button(t):
+            st.session_state.choix['theme'] = t
+            st.session_state.step = 5
+            st.rerun()
+    if st.button("⬅️ Retour"): st.session_state.step = 3; st.rerun()
 
+# NIVEAU 5 (Question)
 elif st.session_state.step == 5:
     st.subheader("5️⃣ Quelle est votre question ?")
     conn = get_connection(); cursor = conn.cursor()
     cursor.execute("SELECT id, question_claire FROM questions_app WHERE theme = ?", (st.session_state.choix['theme'],))
     questions = cursor.fetchall(); conn.close()
     for q in questions:
-        if st.button(q['question_claire']): valider_etape(q['id'], 'id_question')
-    if st.button("⬅️ Retour"): st.session_state.step -= 1; st.rerun()
+        if st.button(q['question_claire']):
+            st.session_state.choix['id_question'] = q['id']
+            st.session_state.step = 6
+            st.rerun()
+    if st.button("⬅️ Retour"): st.session_state.step = 4; st.rerun()
 
+# NIVEAU 6 (Réponse)
 elif st.session_state.step == 6:
     conn = get_connection(); cursor = conn.cursor()
     col = st.session_state.choix['colonne_metier']
     cursor.execute(f"SELECT {col} FROM questions_app WHERE id = ?", (st.session_state.choix['id_question'],))
     num_article_racine = cursor.fetchone()[0]
     conn.close()
-    
     afficher_dossier_article(num_article_racine)
-    
-    if st.button("🔄 Nouvelle recherche"):
-        st.session_state.step = 1; st.session_state.choix = {}; st.rerun()
