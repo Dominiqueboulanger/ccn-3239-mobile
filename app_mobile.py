@@ -17,7 +17,6 @@ st.markdown("""
         background-color: #FFFFFF;
         border: 2px solid #E0E0E0;
     }
-    /* Style pour le champ de saisie */
     .stTextInput > div > div > input {
         height: 50px;
         font-size: 18px;
@@ -60,7 +59,7 @@ if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.choix = {}
 
-# --- HAUT DE PAGE : RECHERCHE RAPIDE (Visible sur iPhone) ---
+# --- HAUT DE PAGE : RECHERCHE RAPIDE ---
 st.title("⚖️ Guide CCN 3239")
 
 with st.expander("🔍 Recherche directe par n° d'article"):
@@ -88,8 +87,20 @@ st.divider()
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible)
 
-# NIVEAU 1
+# NIVEAU 1 : ACCUEIL ET MÉTIER
 elif st.session_state.step == 1:
+    # --- BLOC D'EXPLICATION AJOUTÉ ICI ---
+    st.info("""
+    **Bienvenue dans votre assistant !** 🚀
+    
+    Trouvez votre réponse en 3 étapes :
+    1. **Identifiez votre métier.**
+    2. **Précisez le contexte** (salaire, congés, fin de contrat...).
+    3. **Sélectionnez votre question** pour voir l'article officiel simplifié.
+    
+    *Pour un article précis, utilisez la loupe 🔍 en haut.*
+    """)
+    
     st.subheader("1️⃣ Quel est votre métier ?")
     metiers = {"🍼 Assistant Maternel": "art_am", "🏠 Employé Familial": "art_ef", "👵 Assistant de Vie": "art_ef", "🌳 Autres": "art_sc"}
     for label, col in metiers.items():
