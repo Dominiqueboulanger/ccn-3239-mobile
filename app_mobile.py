@@ -1,30 +1,24 @@
 import streamlit as st
 import sqlite3
+import os
 
 # --- CONFIGURATION DE LA PAGE ---
-st.set_page_config(page_title="Guide CCN 3239", layout="centered")
+st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- STYLE CSS POUR SMARTPHONE (Gros boutons) ---
+# Style CSS pour optimiser l'affichage mobile
 st.markdown("""
     <style>
     div.stButton > button {
         width: 100%;
-        height: 70px;
+        height: 60px;
         font-size: 18px;
-        font-weight: bold;
-        margin-bottom: 15px;
         border-radius: 15px;
-        background-color: #ffffff;
-        border: 2px solid #e0e0e0;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+        margin-bottom: 10px;
+        background-color: #f0f2f6;
+        border: 1px solid #d1d5db;
     }
-    div.stButton > button:hover {
-        border-color: #2e7d32;
-        color: #2e7d32;
-    }
-    .stAlert {
-        border-radius: 15px;
-    }
+    .stSuccess { border-radius: 15px; }
+    .stInfo { border-radius: 15px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -33,133 +27,119 @@ def get_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# --- INITIALISATION DES VARIABLES DE NAVIGATION ---
-if 'etape' not in st.session_state:
-    st.session_state.etape = 1
-    st.session_state.socle = None  # AM, EF, PE ou SC
-    st.session_state.theme_choisi = None
-    st.session_state.target_article = None
+# --- INITIALISATION DES ÉTAPES (SESSION STATE) ---
+if 'step' not in st.session_state:
+    st.session_state.step = 1
+    st.session_state.choix = {}
 
-# --- LOGIQUE DE L'APPLICATION ---
+def next_step(valeur, label_cle):
+    st.session_state.choix[label_cle] = valeur
+    st.session_state.step += 1
+    st.rerun()
 
-st.title("⚖️ Mon Assistant CCN 3239")
+def reset():
+    st.session_state.step = 1
+    st.session_state.choix = {}
+    st.rerun()
 
-# ETAPE 1 : QUEL EST VOTRE MÉTIER ?
-if st.session_state.etape == 1:
+st.title("⚖️ Guide Interactif CCN")
+
+# --- NIVEAU 1 : MÉTIER (PROFIL) ---
+if st.session_state.step == 1:
     st.subheader("1️⃣ Quel est votre métier ?")
-    
-    if st.button("🍼 Assistant Maternel"):
-        st.session_state.socle = "AM"
-        st.session_state.etape = 2
-        st.rerun()
-        
-    if st.button("👵 Assistant de Vie / Parental"):
-        st.session_state.socle = "PE"
-        st.session_state.etape = 2
-        st.rerun()
-        
-    if st.button("🏠 Employé Familial"):
-        st.session_state.socle = "EF"
-        st.session_state.etape = 2
-        st.rerun()
+    options = {
+        "🍼 Assistant Maternel": "art_am",
+        "🏠 Employé Familial": "art_ef",
+        "👵 Assistant de Vie": "art_ef",  # Particulier Employeur utilise souvent le socle EF/PE
+        "🌳 Autres (Jardinier...)": "art_sc"
+    }
+    for label, col in options.items():
+        if st.button(label):
+            next_step(col, 'col_article')
 
-    if st.button("🌳 Autres (Jardinier, chauffeur...)"):
-        st.session_state.socle = "SC"
-        st.session_state.etape = 2
-        st.rerun()
-
-# ETAPE 2 : RUPTURE OU EXÉCUTION ?
-elif st.session_state.etape == 2:
-    st.subheader("2️⃣ Votre situation")
-    
-    if st.button("🛑 Souhaitez-vous mettre fin au contrat ?"):
-        st.session_state.theme_choisi = "Rupture"
-        st.session_state.etape = 3
-        st.rerun()
-        
-    if st.button("📝 Question sur le travail au quotidien"):
-        st.session_state.etape = 3
-        st.rerun()
-        
-    if st.button("⬅️ Retour au métier"):
-        st.session_state.etape = 1
-        st.rerun()
-
-# ETAPE 3 : CHOIX DE LA THÉMATIQUE (Dynamique)
-elif st.session_state.etape == 3:
-    st.subheader("3️⃣ De quoi parle votre question ?")
-    
+# --- NIVEAU 2 : ÉTAPE DE VIE (CONTEXTE) ---
+elif st.session_state.step == 2:
+    st.subheader("2️⃣ Quel est le moment ?")
     conn = get_connection()
     cursor = conn.cursor()
-    
-    # On filtre les thèmes. Si "Rupture" a été choisi, on filtre sur les thèmes de fin de contrat.
-    if st.session_state.theme_choisi == "Rupture":
-        query = "SELECT DISTINCT theme FROM questions_app WHERE theme LIKE '%Rupture%' OR theme LIKE '%Préavis%' OR theme LIKE '%Indemnité%'"
-    else:
-        query = "SELECT DISTINCT theme FROM questions_app WHERE theme NOT LIKE '%Rupture%' AND theme NOT LIKE '%Préavis%' AND theme NOT LIKE '%Indemnité%'"
-    
-    cursor.execute(query)
-    themes = [row['theme'] for row in cursor.fetchall()]
-    
-    for t in themes:
-        if st.button(f"🔹 {t}"):
-            st.session_state.theme_choisi = t
-            st.session_state.etape = 4
-            st.rerun()
-            
-    if st.button("⬅️ Retour"):
-        st.session_state.theme_choisi = None
-        st.session_state.etape = 2
-        st.rerun()
+    cursor.execute("SELECT DISTINCT etape_vie FROM questions_app")
+    etapes = [row[0] for row in cursor.fetchall()]
     conn.close()
 
-# ETAPE 4 : LA QUESTION FINALE
-elif st.session_state.etape == 4:
-    st.subheader(f"❓ Précisez votre question :")
-    st.write(f"Thème : {st.session_state.theme_choisi}")
+    for etape in etapes:
+        if st.button(etape):
+            next_step(etape, 'etape_vie')
     
+    if st.button("⬅️ Retour"): st.session_state.step -= 1; st.rerun()
+
+# --- NIVEAU 3 : FAMILLE (DOMAINE) ---
+elif st.session_state.step == 3:
+    st.subheader("3️⃣ Choisissez une catégorie")
     conn = get_connection()
     cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT famille FROM questions_app WHERE etape_vie = ?", (st.session_state.choix['etape_vie'],))
+    familles = [row[0] for row in cursor.fetchall()]
+    conn.close()
+
+    for famille in familles:
+        if st.button(famille):
+            next_step(famille, 'famille')
     
-    # On affiche les questions liées au thème
-    cursor.execute("SELECT article_id, question_claire FROM questions_app WHERE theme = ?", (st.session_state.theme_choisi,))
+    if st.button("⬅️ Retour"): st.session_state.step -= 1; st.rerun()
+
+# --- NIVEAU 4 : THÈME (CIBLE) ---
+elif st.session_state.step == 4:
+    st.subheader("4️⃣ Précisez votre recherche")
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT theme FROM questions_app WHERE famille = ?", (st.session_state.choix['famille'],))
+    themes = [row[0] for row in cursor.fetchall()]
+    conn.close()
+
+    for theme in themes:
+        if st.button(theme):
+            next_step(theme, 'theme')
+    
+    if st.button("⬅️ Retour"): st.session_state.step -= 1; st.rerun()
+
+# --- NIVEAU 5 : QUESTION FINALE (BESOIN) ---
+elif st.session_state.step == 5:
+    st.subheader("5️⃣ Votre question")
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT question_claire, id FROM questions_app WHERE theme = ?", (st.session_state.choix['theme'],))
     questions = cursor.fetchall()
-    
+    conn.close()
+
     for q in questions:
         if st.button(q['question_claire']):
-            st.session_state.target_article = q['article_id']
-            st.session_state.etape = 5
-            st.rerun()
-            
-    if st.button("⬅️ Retour aux thèmes"):
-        st.session_state.etape = 3
-        st.rerun()
-    conn.close()
+            # On stocke l'ID de la ligne de la question pour récupérer l'article correspondant
+            next_step(q['id'], 'question_id')
+    
+    if st.button("⬅️ Retour"): st.session_state.step -= 1; st.rerun()
 
-# ETAPE 5 : RÉSULTAT FINAL
-elif st.session_state.etape == 5:
+# --- NIVEAU 6 : RÉPONSE (ARTICLE FINAL) ---
+elif st.session_state.step == 6:
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM convention_collective WHERE id = ?", (st.session_state.target_article,))
-    art = cursor.fetchone()
     
-    if art:
-        st.success(f"### ✅ {art['affichage_article']}")
-        
-        st.markdown("#### 💡 L'essentiel à savoir :")
-        st.info(art['texte_simplifie'])
-        
-        with st.expander("⚖️ Voir le texte officiel"):
-            st.write(art['texte_integral'])
-    else:
-        st.error("Article non trouvé dans la base.")
-        
-    if st.button("🔄 Recommencer une recherche"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+    # 1. On récupère d'abord le numéro de l'article spécifique au métier dans questions_app
+    cursor.execute(f"SELECT {st.session_state.choix['col_article']} FROM questions_app WHERE id = ?", (st.session_state.choix['question_id'],))
+    num_article = cursor.fetchone()[0]
+    
+    # 2. On va chercher le contenu de cet article dans la table convention_collective
+    cursor.execute("SELECT * FROM convention_collective WHERE numero_article_isole = ?", (str(num_article),))
+    art = cursor.fetchone()
     conn.close()
 
-# PIED DE PAGE
-st.divider()
-st.caption("Application de formation CCN 3239 - Secteur Particulier Employeur")
+    if art:
+        st.success(f"### 🎯 Article {art['numero_article_isole']} : {art['affichage_article']}")
+        st.info(f"**💡 L'essentiel à retenir :**\n\n{art['texte_simplifie']}")
+        
+        with st.expander("⚖️ Voir le texte officiel (Loi)"):
+            st.write(art['texte_integral'])
+    else:
+        st.error(f"Désolé, le texte de l'article {num_article} n'est pas encore disponible.")
+
+    if st.button("🔄 Recommencer une recherche"):
+        reset()
