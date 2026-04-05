@@ -102,7 +102,7 @@ elif st.session_state.step == 1:
     """)
     
     st.subheader("1️⃣ Quel est votre métier ?")
-    metiers = {"🍼 Assistant Maternel": "art_am", "🏠 Employé Familial": "art_ef", "👵 Assistant de Vie": "art_ef", "🌳 Autres": "art_sc"}
+    metiers = {"🍼 Assistant Maternel": "art_am", "🏠 Employé Familial": "art_ef", "👵 Assistant de Vie / Assistant Parental": "art_ef", "🌳 Autres": "art_sc"}
     for label, col in metiers.items():
         if st.button(label):
             st.session_state.choix['colonne_metier'] = col
