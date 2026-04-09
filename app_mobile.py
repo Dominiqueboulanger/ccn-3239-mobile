@@ -78,13 +78,15 @@ if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.choix = {}
 
-# Barre latérale : Langue
+# Barre latérale : Sélection de la Langue
 with st.sidebar:
     st.title("🌐 Language")
-    langue = st.radio("Select your language", ("Français", "English"))
-    lang_code = 'FR' if langue == "Français" else 'EN'
+    # Utilisation d'un index basé sur la session pour garder la sélection
+    langue_dispo = ["Français", "English"]
+    choix_langue = st.radio("Select your language", langue_dispo)
+    lang_code = 'FR' if choix_langue == "Français" else 'EN'
 
-# Interface Trilingue
+# Dictionnaire d'interface
 UI = {
     'FR': {
         'titre': "⚖️ Guide CCN 3239",
@@ -195,23 +197,23 @@ elif st.session_state.step == 3:
 elif st.session_state.step == 4:
     st.subheader(txt['step4'])
     conn = get_connection(); cursor = conn.cursor()
-    # CORRECTION TRADUCTION THEME
     col_theme = "theme" if lang_code == 'FR' else "theme_en"
     col_famille = "famille" if lang_code == 'FR' else "famille_en"
     cursor.execute(f"SELECT DISTINCT {col_theme} FROM questions WHERE {col_famille} = ?", (st.session_state.choix['famille_val'],))
     themes = [r[0] for r in cursor.fetchall() if r[0]]; conn.close()
     for t in themes:
-        if st.button(t):
-            st.session_state.choix['theme'] = t
-            st.session_state.step = 5
-            st.rerun()
+        if t[col_theme if isinstance(t, dict) else 0]: # Sécurité accès tuple/dict
+            val_t = t[0] if isinstance(t, tuple) else t
+            if st.button(val_t):
+                st.session_state.choix['theme'] = val_t
+                st.session_state.step = 5
+                st.rerun()
     if st.button(txt['btn_retour']): st.session_state.step = 3; st.rerun()
 
 elif st.session_state.step == 5:
     st.subheader(txt['step5'])
     conn = get_connection(); cursor = conn.cursor()
     col_q = "question_claire" if lang_code == 'FR' else "question_en"
-    # On cherche en fonction du thème sélectionné (qui est déjà dans la bonne langue)
     col_theme = "theme" if lang_code == 'FR' else "theme_en"
     cursor.execute(f"SELECT id, {col_q} FROM questions WHERE {col_theme} = ?", (st.session_state.choix['theme'],))
     questions = cursor.fetchall(); conn.close()
@@ -230,7 +232,6 @@ elif st.session_state.step == 6:
     res = cursor.fetchone()
     conn.close()
     if res and res[0]:
-        # Simple conversion string car la base est maintenant propre (TEXT)
         article_propre = str(res[0]).strip()
         afficher_dossier_article(article_propre, lang_code)
     else:
