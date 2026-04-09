@@ -77,16 +77,23 @@ def afficher_dossier_article(num_racine, lang='FR'):
 if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.choix = {}
+if 'langue_choisie' not in st.session_state:
+    st.session_state.langue_choisie = "Français"
 
-# Barre latérale : Sélection de la Langue
-with st.sidebar:
-    st.title("🌐 Language")
-    # Utilisation d'un index basé sur la session pour garder la sélection
-    langue_dispo = ["Français", "English"]
-    choix_langue = st.radio("Select your language", langue_dispo)
-    lang_code = 'FR' if choix_langue == "Français" else 'EN'
+# --- NOUVEAU : SÉLECTEUR DE LANGUE EN HAUT (PLUS ERGONOMIQUE) ---
+col_l1, col_l2 = st.columns(2)
+with col_l1:
+    if st.button("🇫🇷 Français"):
+        st.session_state.langue_choisie = "Français"
+        st.rerun()
+with col_l2:
+    if st.button("🇬🇧 English"):
+        st.session_state.langue_choisie = "English"
+        st.rerun()
 
-# Dictionnaire d'interface
+lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
+
+# Interface Trilingue (Structure intacte)
 UI = {
     'FR': {
         'titre': "⚖️ Guide CCN 3239",
@@ -153,7 +160,7 @@ if st.session_state.step != 1:
 
 st.divider()
 
-# --- LOGIQUE DE L'ENTONNOIR ---
+# --- LOGIQUE DE L'ENTONNOIR (Structure originale conservée) ---
 
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible, lang_code)
@@ -202,12 +209,10 @@ elif st.session_state.step == 4:
     cursor.execute(f"SELECT DISTINCT {col_theme} FROM questions WHERE {col_famille} = ?", (st.session_state.choix['famille_val'],))
     themes = [r[0] for r in cursor.fetchall() if r[0]]; conn.close()
     for t in themes:
-        if t[col_theme if isinstance(t, dict) else 0]: # Sécurité accès tuple/dict
-            val_t = t[0] if isinstance(t, tuple) else t
-            if st.button(val_t):
-                st.session_state.choix['theme'] = val_t
-                st.session_state.step = 5
-                st.rerun()
+        if st.button(t):
+            st.session_state.choix['theme'] = t
+            st.session_state.step = 5
+            st.rerun()
     if st.button(txt['btn_retour']): st.session_state.step = 3; st.rerun()
 
 elif st.session_state.step == 5:
