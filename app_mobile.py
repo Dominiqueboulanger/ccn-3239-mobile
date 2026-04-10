@@ -30,9 +30,9 @@ st.markdown("""
         border: none !important;
         background: transparent !important;
         padding: 0px !important;
-        height: 30px !important;
-        width: 30px !important;
-        font-size: 20px !important;
+        height: 20px !important;
+        width: 20px !important;
+        font-size: 18px !important;
         box-shadow: none !important;
     }
 
