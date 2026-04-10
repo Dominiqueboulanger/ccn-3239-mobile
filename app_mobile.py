@@ -5,72 +5,60 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- 2. DESIGN (FORÇAGE LIGNE UNIQUE) ---
+# --- 2. DESIGN (SYSTÈME À 2 LIGNES) ---
 st.markdown("""
     <style>
-    /* Conteneur personnalisé pour forcer l'alignement horizontal sur mobile */
-    .header-container {
+    /* Centrage des éléments dans les colonnes */
+    [data-testid="column"] {
         display: flex;
-        flex-direction: row;
+        justify-content: center;
         align-items: center;
-        justify-content: space-between;
-        width: 100%;
-        margin-bottom: 10px;
-        gap: 1px;
     }
 
-    .flags-group {
-        display: flex;
-        flex-direction: row;
-        gap: 1px;
+    /* Suppression totale des cadres autour des drapeaux */
+    div.stButton > button[key^="lang_"] {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        padding: 0px !important;
+        height: 50px !important;
+        width: 50px !important;
+        font-size: 35px !important;
+    }
+    
+    /* On s'assure qu'aucun cadre n'apparaît au clic/survol */
+    div.stButton > button[key^="lang_"]:hover, 
+    div.stButton > button[key^="lang_"]:active, 
+    div.stButton > button[key^="lang_"]:focus {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
     }
 
-    /* Style des boutons drapeaux : suppression totale de tout contour */
-div.stButton > button[key^="lang_"] {
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    padding: 0px !important;
-    height: 40px !important;
-    width: 40px !important;
-    font-size: 28px !important;
-}
-
-/* On force aussi la suppression au survol et au clic */
-div.stButton > button[key^="lang_"]:hover, 
-div.stButton > button[key^="lang_"]:active, 
-div.stButton > button[key^="lang_"]:focus {
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    color: inherit !important;
-}
-    }
-
-    /* Badge du Socle : Largeur fixe de 50% avec texte centré */
+    /* Badge du Socle : Ligne 2, large et lisible */
     .socle-badge {
         background-color: #f0f2f6;
         border: 1px solid #d1d5db; 
-        border-radius: 8px;
+        border-radius: 10px;
         text-align: center; 
-        font-size: 10px !important; 
+        font-size: 16px !important; 
         font-weight: bold;
-        color: #000000 !important;
-        height: 40px;
+        color: #000000 !important; /* Texte noir forcé */
+        height: 45px;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 25%; /* Ajusté pour laisser de la place aux drapeaux */
+        width: 100%; 
+        margin: 10px 0;
         box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
     }
 
-    /* Boutons de navigation principaux */
-    div.stButton > button {
+    /* Style des boutons de navigation classiques */
+    div.stButton > button:not([key^="lang_"]) {
         width: 100%;
         height: 55px;
-        font-size: 16px;
         border-radius: 12px;
         background-color: #FFFFFF !important; 
         color: #000000 !important;           
@@ -79,10 +67,7 @@ div.stButton > button[key^="lang_"]:focus {
     
     .stTextInput > div > div > input {
         color: #000000 !important;
-        background-color: #FFFFFF !important;
     }
-
-    h1 { font-size: 22px !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -164,34 +149,26 @@ UI = {
 lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
 txt = UI[lang_code]
 
-# --- 6. BARRE SUPÉRIEURE (HTML PERSONNALISÉ POUR FORCER L'ALIGNEMENT) ---
-# On utilise des colonnes Streamlit mais avec un CSS qui empêche le wrap
-cols = st.columns([1, 1, 4])
+# --- 6. BARRE SUPÉRIEURE (2 LIGNES) ---
 
-with cols[0]:
+# Ligne 1 : Les Drapeaux
+c1, c2 = st.columns(2)
+with c1:
     if st.button("🇫🇷", key="lang_fr"):
         st.session_state.langue_choisie = "Français"
         st.rerun()
-with cols[1]:
+with c2:
     if st.button("🇬🇧", key="lang_en"):
         st.session_state.langue_choisie = "English"
         st.rerun()
-with cols[2]:
-    if 'colonne_metier' in st.session_state.choix:
-        nom_socle = txt['socles'].get(st.session_state.choix['colonne_metier'], "")
-        st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div class="socle-badge">-</div>', unsafe_allow_html=True)
 
-# Application d'un correctif CSS final pour forcer le comportement horizontal des colonnes
-st.markdown("""
-    <style>
-    /* Force les colonnes à rester sur une seule ligne même sur mobile */
-    [data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# Ligne 2 : Le Badge du Socle
+if 'colonne_metier' in st.session_state.choix:
+    nom_socle = txt['socles'].get(st.session_state.choix['colonne_metier'], "")
+    st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
+else:
+    label_metier = "Choisissez un métier" if lang_code == 'FR' else "Choose a job"
+    st.markdown(f'<div class="socle-badge">{label_metier}</div>', unsafe_allow_html=True)
 
 st.title(txt['titre'])
 
