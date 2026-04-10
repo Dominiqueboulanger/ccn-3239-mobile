@@ -5,64 +5,72 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- 2. DESIGN (OPTIMISATION TOTALE ESPACE HORIZONTAL) ---
+# --- 2. DESIGN ULTRA-COMPACT ET FORÇAGE COULEURS ---
 st.markdown("""
     <style>
-    /* Force l'alignement horizontal strict et supprime les marges de Streamlit */
+    /* Force l'alignement horizontal et supprime les espaces inutiles */
     [data-testid="column"] {
         width: fit-content !important;
         flex: 1 1 0% !important;
         min-width: 0px !important;
     }
-    
-    /* Réduit l'espace vide entre les colonnes */
     [data-testid="stHorizontalBlock"] {
-        gap: 0.5rem !important;
+        gap: 0.3rem !important;
+        align-items: center !important;
     }
 
-    /* Boutons de drapeaux ultra-compacts */
-    .btn-flag button {
-        height: 40px !important;
-        font-size: 20px !important;
-        padding: 0px !important;
-        margin: 0px !important;
-    }
-
-    /* Badge du Socle avec police réduite */
+    /* Badge du Socle : Police minuscule et texte noir forcé */
     .socle-badge {
-        background-color: #f8fafc;
-        border: 1px solid #e2e8f0; 
-        border-radius: 8px;
+        background-color: #f0f2f6;
+        border: 1px solid #d1d5db; 
+        border-radius: 6px;
         text-align: center; 
-        font-size: 10px !important; /* Police encore plus petite */
+        font-size: 9px !important; 
         font-weight: bold;
-        color: #1e293b;
-        height: 40px; /* Aligné sur la hauteur des drapeaux */
+        color: #000000 !important; /* NOIR FORCÉ */
+        height: 35px;
         display: flex;
         align-items: center;
         justify-content: center;
         line-height: 1;
         padding: 0 4px;
+        width: 100%;
     }
 
-    /* Style général des boutons (Mode Sombre compatible) */
+    /* Style des liens images (drapeaux) */
+    .flag-link {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 35px;
+    }
+    .flag-link img {
+        width: 30px;
+        transition: transform 0.2s;
+    }
+    .flag-link img:active {
+        transform: scale(0.9);
+    }
+
+    /* Style général des boutons et inputs */
     div.stButton > button {
         width: 100%;
-        height: 55px;
-        font-size: 16px;
-        border-radius: 12px;
+        height: 50px;
+        font-size: 15px;
+        border-radius: 10px;
         background-color: #FFFFFF !important; 
-        color: #1e293b !important;           
-        border: 2px solid #E0E0E0 !important;
+        color: #000000 !important; /* TEXTE NOIR */
+        border: 1px solid #E0E0E0 !important;
     }
     
     .stTextInput > div > div > input {
-        color: #1e293b !important;
+        color: #000000 !important;
         background-color: #FFFFFF !important;
     }
 
-    h1 { font-size: 24px !important; color: #2c3e50; }
-    h2, h3, h4 { color: #2c3e50; }
+    /* Titres plus petits pour mobile */
+    h1 { font-size: 20px !important; color: #1e293b; }
+    h2, h3 { font-size: 18px !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -100,7 +108,7 @@ def afficher_dossier_article(num_racine, lang='FR'):
                 st.markdown(f"#### 📄 {titre}")
                 if col_resume in cols_art and art[col_resume]:
                     st.info(f"**💡 {l['essentiel']}** {art[col_resume]}")
-                with st.expander(f"⚖️ {l['officiel']} ({art['numero_article_isole']})"):
+                with st.expander(f"⚖️ {l['officiel']}"):
                     st.write(art['texte_integral'])
                 st.divider()
     else:
@@ -113,13 +121,28 @@ if 'step' not in st.session_state:
 if 'langue_choisie' not in st.session_state:
     st.session_state.langue_choisie = "Français"
 
-# --- 5. DICTIONNAIRE D'INTERFACE ---
+# --- 5. LOGIQUE DES DRAPEAUX CLIQUABLES (SANS BOUTON) ---
+# On utilise des paramètres d'URL ou des boutons invisibles Streamlit pour changer la langue
+c1, c2, c3 = st.columns([0.6, 0.6, 2.5])
+
+with c1:
+    # Utilisation d'un bouton Streamlit mais stylisé via CSS pour ressembler à une simple icône
+    if st.button("🇫🇷", key="lang_fr", help="Français"):
+        st.session_state.langue_choisie = "Français"
+        st.rerun()
+with c2:
+    if st.button("🇬🇧", key="lang_en", help="English"):
+        st.session_state.langue_choisie = "English"
+        st.rerun()
+
+lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
+
 UI = {
     'FR': {
         'titre': "⚖️ Guide CCN 3239",
         'recherche_label': "Recherche directe par n° d'article",
         'btn_aller': "Aller", 'btn_home': "🏠 Accueil", 'btn_retour': "⬅️ Retour",
-        'intro': "**Bienvenue !** 🚀\nTrouvez votre réponse en quelques clics.",
+        'intro': "**Bienvenue !** 🚀",
         'step1': "1️⃣ Quel est votre métier ?",
         'metiers': {
             "🍼 Assistant Maternel": "art_am", "👶 Assistant Parental": "art_ef", 
@@ -131,7 +154,7 @@ UI = {
         'titre': "⚖️ 3239 Agreement Guide",
         'recherche_label': "Direct search (Article #)",
         'btn_aller': "Go", 'btn_home': "🏠 Home", 'btn_retour': "⬅️ Back",
-        'intro': "**Welcome!** 🚀\nFind your answer in a few clicks.",
+        'intro': "**Welcome!** 🚀",
         'step1': "1️⃣ What is your job?",
         'metiers': {
             "🍼 Childminder": "art_am", "👶 Nanny": "art_ef", 
@@ -140,24 +163,6 @@ UI = {
         'socles': {"art_am": "ASSMAT Socle", "art_ef": "SPE Socle", "art_sc": "Common Socle"}
     }
 }
-
-# --- 6. BARRE SUPÉRIEURE : LANGUES & RAPPEL DU SOCLE (COMPACTE) ---
-c1, c2, c3 = st.columns([1, 1, 2])
-
-with c1:
-    st.markdown('<div class="btn-flag">', unsafe_allow_html=True)
-    if st.button("🇫🇷"):
-        st.session_state.langue_choisie = "Français"
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-with c2:
-    st.markdown('<div class="btn-flag">', unsafe_allow_html=True)
-    if st.button("🇬🇧"):
-        st.session_state.langue_choisie = "English"
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
 txt = UI[lang_code]
 
 with c3:
@@ -165,12 +170,11 @@ with c3:
         nom_socle = txt['socles'].get(st.session_state.choix['colonne_metier'], "")
         st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
     else:
-        # Affiche un badge vide ou neutre pour maintenir l'alignement
         st.markdown(f'<div class="socle-badge">-</div>', unsafe_allow_html=True)
 
 st.title(txt['titre'])
 
-# --- 7. RECHERCHE ET NAVIGATION ---
+# --- 6. RECHERCHE RAPIDE ---
 with st.expander(f"🔍 {txt['recherche_label']}"):
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -178,19 +182,15 @@ with st.expander(f"🔍 {txt['recherche_label']}"):
     with col2:
         if st.button(txt['btn_aller']):
             if art_direct:
-                st.session_state.step = "DIRECT"
-                st.session_state.art_cible = art_direct
-                st.rerun()
+                st.session_state.step = "DIRECT"; st.session_state.art_cible = art_direct; st.rerun()
 
 if st.session_state.step != 1:
     if st.button(txt['btn_home']):
-        st.session_state.step = 1
-        st.session_state.choix = {}
-        st.rerun()
+        st.session_state.step = 1; st.session_state.choix = {}; st.rerun()
 
 st.divider()
 
-# --- 8. LOGIQUE DE NAVIGATION ---
+# --- 7. LOGIQUE DE NAVIGATION ---
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible, lang_code)
 
@@ -200,24 +200,21 @@ elif st.session_state.step == 1:
     for label, col in txt['metiers'].items():
         if st.button(label):
             st.session_state.choix['colonne_metier'] = col
-            st.session_state.step = 2
-            st.rerun()
+            st.session_state.step = 2; st.rerun()
 
 elif st.session_state.step == 2:
-    st.subheader("2️⃣ Quel est le moment ?" if lang_code == 'FR' else "2️⃣ When?")
+    st.subheader("2️⃣ Moment ?" if lang_code == 'FR' else "2️⃣ When?")
     conn = get_connection(); cursor = conn.cursor()
     col_db = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
     cursor.execute(f"SELECT DISTINCT {col_db} FROM questions WHERE {col_db} IS NOT NULL AND {col_db} != ''")
     etapes = [r[0] for r in cursor.fetchall()]; conn.close()
     for e in etapes:
         if st.button(e):
-            st.session_state.choix['etape_val'] = e
-            st.session_state.step = 3
-            st.rerun()
+            st.session_state.choix['etape_val'] = e; st.session_state.step = 3; st.rerun()
     if st.button(txt['btn_retour']): st.session_state.step = 1; st.rerun()
 
 elif st.session_state.step == 3:
-    st.subheader("3️⃣ Choisissez une catégorie" if lang_code == 'FR' else "3️⃣ Category")
+    st.subheader("3️⃣ Catégorie" if lang_code == 'FR' else "3️⃣ Category")
     conn = get_connection(); cursor = conn.cursor()
     col_fam = "famille" if lang_code == 'FR' else "famille_en"
     col_etp = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
@@ -225,13 +222,11 @@ elif st.session_state.step == 3:
     familles = [r[0] for r in cursor.fetchall() if r[0]]; conn.close()
     for f in familles:
         if st.button(f):
-            st.session_state.choix['famille_val'] = f
-            st.session_state.step = 4
-            st.rerun()
+            st.session_state.choix['famille_val'] = f; st.session_state.step = 4; st.rerun()
     if st.button(txt['btn_retour']): st.session_state.step = 2; st.rerun()
 
 elif st.session_state.step == 4:
-    st.subheader("4️⃣ Précisez votre sujet" if lang_code == 'FR' else "4️⃣ Subject")
+    st.subheader("4️⃣ Sujet" if lang_code == 'FR' else "4️⃣ Subject")
     conn = get_connection(); cursor = conn.cursor()
     col_th = "theme" if lang_code == 'FR' else "theme_en"
     col_fam = "famille" if lang_code == 'FR' else "famille_en"
@@ -239,13 +234,11 @@ elif st.session_state.step == 4:
     themes = [r[0] for r in cursor.fetchall() if r[0]]; conn.close()
     for t in themes:
         if st.button(t):
-            st.session_state.choix['theme'] = t
-            st.session_state.step = 5
-            st.rerun()
+            st.session_state.choix['theme'] = t; st.session_state.step = 5; st.rerun()
     if st.button(txt['btn_retour']): st.session_state.step = 3; st.rerun()
 
 elif st.session_state.step == 5:
-    st.subheader("5️⃣ Quelle est votre question ?" if lang_code == 'FR' else "5️⃣ Question")
+    st.subheader("5️⃣ Question")
     conn = get_connection(); cursor = conn.cursor()
     col_q = "question_claire" if lang_code == 'FR' else "question_en"
     col_th = "theme" if lang_code == 'FR' else "theme_en"
@@ -253,9 +246,7 @@ elif st.session_state.step == 5:
     questions = cursor.fetchall(); conn.close()
     for q in questions:
         if st.button(q[col_q]):
-            st.session_state.choix['id_question'] = q['id']
-            st.session_state.step = 6
-            st.rerun()
+            st.session_state.choix['id_question'] = q['id']; st.session_state.step = 6; st.rerun()
     if st.button(txt['btn_retour']): st.session_state.step = 4; st.rerun()
 
 elif st.session_state.step == 6:
@@ -263,10 +254,9 @@ elif st.session_state.step == 6:
     col_metier = st.session_state.choix['colonne_metier']
     id_q = st.session_state.choix['id_question']
     cursor.execute(f"SELECT {col_metier} FROM questions WHERE id = ?", (id_q,))
-    res = cursor.fetchone()
-    conn.close()
+    res = cursor.fetchone(); conn.close()
     if res and res[0]:
         afficher_dossier_article(str(res[0]).strip(), lang_code)
     else:
-        st.warning("⚠️ Article non renseigné.")
+        st.warning("Article non renseigné.")
     if st.button(txt['btn_retour']): st.session_state.step = 5; st.rerun()
