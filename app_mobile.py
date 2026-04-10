@@ -5,45 +5,51 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- 2. DESIGN CORRIGÉ (ALIGNEMENT HORIZONTAL FORCÉ) ---
+# --- 2. DESIGN (OPTIMISATION TOTALE ESPACE HORIZONTAL) ---
 st.markdown("""
     <style>
-    /* Force les colonnes à rester côte à côte même sur mobile */
+    /* Force l'alignement horizontal strict et supprime les marges de Streamlit */
     [data-testid="column"] {
-        width: calc(33% - 1rem) !important;
-        flex: 1 1 calc(33% - 1rem) !important;
+        width: fit-content !important;
+        flex: 1 1 0% !important;
         min-width: 0px !important;
     }
-
-    /* Style des boutons de langue (Drapeaux) */
-    .btn-flag button {
-        height: 50px !important;
-        font-size: 22px !important;
-        padding: 0px !important;
+    
+    /* Réduit l'espace vide entre les colonnes */
+    [data-testid="stHorizontalBlock"] {
+        gap: 0.5rem !important;
     }
 
-    /* Badge du Socle (Métier) */
+    /* Boutons de drapeaux ultra-compacts */
+    .btn-flag button {
+        height: 40px !important;
+        font-size: 20px !important;
+        padding: 0px !important;
+        margin: 0px !important;
+    }
+
+    /* Badge du Socle avec police réduite */
     .socle-badge {
         background-color: #f8fafc;
         border: 1px solid #e2e8f0; 
-        border-radius: 10px;
+        border-radius: 8px;
         text-align: center; 
-        font-size: 11px; /* Un peu plus petit pour tenir sur une ligne */
+        font-size: 10px !important; /* Police encore plus petite */
         font-weight: bold;
         color: #1e293b;
-        height: 50px;
+        height: 40px; /* Aligné sur la hauteur des drapeaux */
         display: flex;
         align-items: center;
         justify-content: center;
-        line-height: 1.1;
-        padding: 2px;
+        line-height: 1;
+        padding: 0 4px;
     }
 
-    /* Style général des boutons et inputs (Mode Sombre compatible) */
+    /* Style général des boutons (Mode Sombre compatible) */
     div.stButton > button {
         width: 100%;
-        height: 60px;
-        font-size: 18px;
+        height: 55px;
+        font-size: 16px;
         border-radius: 12px;
         background-color: #FFFFFF !important; 
         color: #1e293b !important;           
@@ -55,7 +61,8 @@ st.markdown("""
         background-color: #FFFFFF !important;
     }
 
-    h1, h2, h3, h4 { color: #2c3e50; }
+    h1 { font-size: 24px !important; color: #2c3e50; }
+    h2, h3, h4 { color: #2c3e50; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -134,8 +141,8 @@ UI = {
     }
 }
 
-# --- 6. BARRE SUPÉRIEURE : LANGUES & RAPPEL DU SOCLE ---
-c1, c2, c3 = st.columns([1, 1, 2]) # Ratio équilibré pour mobile
+# --- 6. BARRE SUPÉRIEURE : LANGUES & RAPPEL DU SOCLE (COMPACTE) ---
+c1, c2, c3 = st.columns([1, 1, 2])
 
 with c1:
     st.markdown('<div class="btn-flag">', unsafe_allow_html=True)
@@ -155,13 +162,15 @@ txt = UI[lang_code]
 
 with c3:
     if 'colonne_metier' in st.session_state.choix:
-        # On affiche le nom du SOCLE au lieu du métier
         nom_socle = txt['socles'].get(st.session_state.choix['colonne_metier'], "")
         st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
+    else:
+        # Affiche un badge vide ou neutre pour maintenir l'alignement
+        st.markdown(f'<div class="socle-badge">-</div>', unsafe_allow_html=True)
 
 st.title(txt['titre'])
 
-# --- 7. RECHERCHE ET NAVIGATION (Inchangé) ---
+# --- 7. RECHERCHE ET NAVIGATION ---
 with st.expander(f"🔍 {txt['recherche_label']}"):
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -181,7 +190,7 @@ if st.session_state.step != 1:
 
 st.divider()
 
-# --- 8. LOGIQUE DE NAVIGATION (ETAPES 1-6 INTACTES) ---
+# --- 8. LOGIQUE DE NAVIGATION ---
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible, lang_code)
 
@@ -194,7 +203,6 @@ elif st.session_state.step == 1:
             st.session_state.step = 2
             st.rerun()
 
-# [Les étapes 2 à 6 restent identiques au code précédent pour assurer la continuité]
 elif st.session_state.step == 2:
     st.subheader("2️⃣ Quel est le moment ?" if lang_code == 'FR' else "2️⃣ When?")
     conn = get_connection(); cursor = conn.cursor()
