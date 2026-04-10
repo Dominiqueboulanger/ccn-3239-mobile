@@ -2,40 +2,48 @@ import streamlit as st
 import sqlite3
 import os
 
-# --- CONFIGURATION DE LA PAGE ---
+# --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# Design optimisé pour mobile
+# --- 2. DESIGN (CORRECTIF MODE SOMBRE + MOBILE) ---
 st.markdown("""
     <style>
+    /* Force l'apparence des boutons : Texte noir sur fond blanc, même en mode sombre */
     div.stButton > button {
         width: 100%;
         height: 60px;
         font-size: 18px;
         border-radius: 12px;
         margin-bottom: 10px;
-        background-color: #FFFFFF;
-        border: 2px solid #E0E0E0;
+        background-color: #FFFFFF !important; 
+        color: #1e293b !important;           
+        border: 2px solid #E0E0E0 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
+    
+    /* Force la visibilité du texte saisi par l'utilisateur */
     .stTextInput > div > div > input {
         height: 50px;
         font-size: 18px;
+        color: #1e293b !important;
+        background-color: #FFFFFF !important;
     }
+
+    /* Couleurs de texte pour les titres et blocs d'info */
+    h1, h2, h3, h4 { color: #2c3e50; }
+    .stInfo, .stSuccess { color: #1e293b !important; }
     </style>
     """, unsafe_allow_html=True)
 
 def get_connection():
-    """Établit la connexion avec la base SQLite."""
     conn = sqlite3.connect("CCN_3239.db")
     conn.row_factory = sqlite3.Row
     return conn
 
+# --- 3. FONCTION D'AFFICHAGE DES ARTICLES ---
 def afficher_dossier_article(num_racine, lang='FR'):
-    """Affiche l'article et ses sous-articles avec gestion bilingue."""
     conn = get_connection()
     cursor = conn.cursor()
-    
-    # Recherche l'article (ex: 139) et ses dérivés (ex: 139-1)
     cursor.execute("""
         SELECT * FROM convention_collective 
         WHERE numero_article_isole = ? 
@@ -47,7 +55,6 @@ def afficher_dossier_article(num_racine, lang='FR'):
     conn.close()
 
     col_resume = 'texte_simplifie' if lang == 'FR' else 'texte_simplifie_en'
-
     labels = {
         'FR': {"dossier": "Dossier : Article", "essentiel": "L'essentiel :", "officiel": "Texte officiel", "introuvable": "n'a pas été trouvé."},
         'EN': {"dossier": "File: Article", "essentiel": "Key points:", "officiel": "Official text", "introuvable": "was not found."}
@@ -58,29 +65,25 @@ def afficher_dossier_article(num_racine, lang='FR'):
         st.success(f"### 🎯 {l['dossier']} {num_racine}")
         for art in articles:
             with st.container():
-                cols_disponibles = art.keys()
-                titre_art = art['affichage_article'] if 'affichage_article' in cols_disponibles else f"Article {art['numero_article_isole']}"
-                st.markdown(f"#### 📄 {titre_art}")
-                
-                if col_resume in cols_disponibles and art[col_resume]:
+                cols = art.keys()
+                titre = art['affichage_article'] if 'affichage_article' in cols else f"Article {art['numero_article_isole']}"
+                st.markdown(f"#### 📄 {titre}")
+                if col_resume in cols and art[col_resume]:
                     st.info(f"**💡 {l['essentiel']}** {art[col_resume]}")
-                else:
-                    st.warning(f"Résumé non disponible en {lang}")
-                
                 with st.expander(f"⚖️ {l['officiel']} ({art['numero_article_isole']})"):
                     st.write(art['texte_integral'])
                 st.divider()
     else:
         st.error(f"Article {num_racine} {l['introuvable']}")
 
-# --- INITIALISATION SESSION ---
+# --- 4. INITIALISATION SESSION ---
 if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.choix = {}
 if 'langue_choisie' not in st.session_state:
     st.session_state.langue_choisie = "Français"
 
-# --- NOUVEAU : SÉLECTEUR DE LANGUE EN HAUT (PLUS ERGONOMIQUE) ---
+# --- 5. SÉLECTEUR DE LANGUE (VISIBLE EN HAUT) ---
 col_l1, col_l2 = st.columns(2)
 with col_l1:
     if st.button("🇫🇷 Français"):
@@ -93,7 +96,7 @@ with col_l2:
 
 lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
 
-# Interface Trilingue (Structure intacte)
+# --- 6. DICTIONNAIRE D'INTERFACE ---
 UI = {
     'FR': {
         'titre': "⚖️ Guide CCN 3239",
@@ -108,11 +111,8 @@ UI = {
         'step4': "4️⃣ Précisez votre sujet",
         'step5': "5️⃣ Quelle est votre question ?",
         'metiers': {
-            "🍼 Assistant Maternel": "art_am", 
-            "👶 Assistant Parental": "art_ef", 
-            "🏠 Employé Familial": "art_ef", 
-            "👵 Assistant de Vie": "art_ef", 
-            "🌳 Autres": "art_sc"
+            "🍼 Assistant Maternel": "art_am", "👶 Assistant Parental": "art_ef", 
+            "🏠 Employé Familial": "art_ef", "👵 Assistant de Vie": "art_ef", "🌳 Autres": "art_sc"
         }
     },
     'EN': {
@@ -128,11 +128,8 @@ UI = {
         'step4': "4️⃣ Specify your subject",
         'step5': "5️⃣ What is your question?",
         'metiers': {
-            "🍼 Childminder": "art_am", 
-            "👶 Nanny / Parental Asst": "art_ef", 
-            "🏠 Domestic Worker": "art_ef", 
-            "👵 Care Assistant": "art_ef", 
-            "🌳 Others": "art_sc"
+            "🍼 Childminder": "art_am", "👶 Nanny": "art_ef", 
+            "🏠 Domestic Worker": "art_ef", "👵 Care Assistant": "art_ef", "🌳 Others": "art_sc"
         }
     }
 }
@@ -140,7 +137,7 @@ UI = {
 txt = UI[lang_code]
 st.title(txt['titre'])
 
-# Recherche rapide
+# --- 7. RECHERCHE RAPIDE ---
 with st.expander(f"🔍 {txt['recherche_label']}"):
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -160,8 +157,7 @@ if st.session_state.step != 1:
 
 st.divider()
 
-# --- LOGIQUE DE L'ENTONNOIR (Structure originale conservée) ---
-
+# --- 8. LOGIQUE DE NAVIGATION (ÉTAPES 1 À 6) ---
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible, lang_code)
 
@@ -190,9 +186,9 @@ elif st.session_state.step == 2:
 elif st.session_state.step == 3:
     st.subheader(txt['step3'])
     conn = get_connection(); cursor = conn.cursor()
-    col_famille = "famille" if lang_code == 'FR' else "famille_en"
-    col_etape = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
-    cursor.execute(f"SELECT DISTINCT {col_famille} FROM questions WHERE {col_etape} = ?", (st.session_state.choix['etape_val'],))
+    col_fam = "famille" if lang_code == 'FR' else "famille_en"
+    col_etp = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
+    cursor.execute(f"SELECT DISTINCT {col_fam} FROM questions WHERE {col_etp} = ?", (st.session_state.choix['etape_val'],))
     familles = [r[0] for r in cursor.fetchall() if r[0]]; conn.close()
     for f in familles:
         if st.button(f):
@@ -204,9 +200,9 @@ elif st.session_state.step == 3:
 elif st.session_state.step == 4:
     st.subheader(txt['step4'])
     conn = get_connection(); cursor = conn.cursor()
-    col_theme = "theme" if lang_code == 'FR' else "theme_en"
-    col_famille = "famille" if lang_code == 'FR' else "famille_en"
-    cursor.execute(f"SELECT DISTINCT {col_theme} FROM questions WHERE {col_famille} = ?", (st.session_state.choix['famille_val'],))
+    col_th = "theme" if lang_code == 'FR' else "theme_en"
+    col_fam = "famille" if lang_code == 'FR' else "famille_en"
+    cursor.execute(f"SELECT DISTINCT {col_th} FROM questions WHERE {col_fam} = ?", (st.session_state.choix['famille_val'],))
     themes = [r[0] for r in cursor.fetchall() if r[0]]; conn.close()
     for t in themes:
         if st.button(t):
@@ -219,8 +215,8 @@ elif st.session_state.step == 5:
     st.subheader(txt['step5'])
     conn = get_connection(); cursor = conn.cursor()
     col_q = "question_claire" if lang_code == 'FR' else "question_en"
-    col_theme = "theme" if lang_code == 'FR' else "theme_en"
-    cursor.execute(f"SELECT id, {col_q} FROM questions WHERE {col_theme} = ?", (st.session_state.choix['theme'],))
+    col_th = "theme" if lang_code == 'FR' else "theme_en"
+    cursor.execute(f"SELECT id, {col_q} FROM questions WHERE {col_th} = ?", (st.session_state.choix['theme'],))
     questions = cursor.fetchall(); conn.close()
     for q in questions:
         if st.button(q[col_q]):
@@ -237,8 +233,7 @@ elif st.session_state.step == 6:
     res = cursor.fetchone()
     conn.close()
     if res and res[0]:
-        article_propre = str(res[0]).strip()
-        afficher_dossier_article(article_propre, lang_code)
+        afficher_dossier_article(str(res[0]).strip(), lang_code)
     else:
-        st.warning("⚠️ Article non renseigné pour ce profil.")
+        st.warning("⚠️ Article non renseigné.")
     if st.button(txt['btn_retour']): st.session_state.step = 5; st.rerun()
