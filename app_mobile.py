@@ -22,7 +22,7 @@ st.markdown("""
     .flags-group {
         display: flex;
         flex-direction: row;
-        gap: 10px;
+        gap: 1px;
     }
 
     /* Style des boutons drapeaux transparents */
