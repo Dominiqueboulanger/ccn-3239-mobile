@@ -5,10 +5,10 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- 2. DESIGN (VERSION INITIALE + CORRECTIF DRAPEAUX) ---
+# --- 2. DESIGN (CORRECTIF MODE SOMBRE + MOBILE) ---
 st.markdown("""
     <style>
-    /* Style initial des boutons */
+    /* Force l'apparence des boutons : Texte noir sur fond blanc, même en mode sombre */
     div.stButton > button {
         width: 100%;
         height: 60px;
@@ -21,22 +21,7 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
-    /* STYLE SPÉCIFIQUE POUR LES DRAPEAUX (En haut) */
-    div.stButton > button[key^="lang_"] {
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        font-size: 35px !important;
-        height: 50px !important;
-    }
-
-    /* Forçage de l'alignement horizontal pour les colonnes des drapeaux */
-    [data-testid="stHorizontalBlock"] {
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-    }
-
+    /* Force la visibilité du texte saisi par l'utilisateur */
     .stTextInput > div > div > input {
         height: 50px;
         font-size: 18px;
@@ -44,6 +29,7 @@ st.markdown("""
         background-color: #FFFFFF !important;
     }
 
+    /* Couleurs de texte pour les titres et blocs d'info */
     h1, h2, h3, h4 { color: #2c3e50; }
     .stInfo, .stSuccess { color: #1e293b !important; }
     </style>
@@ -54,7 +40,7 @@ def get_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# --- 3. FONCTION D'AFFICHAGE ---
+# --- 3. FONCTION D'AFFICHAGE DES ARTICLES ---
 def afficher_dossier_article(num_racine, lang='FR'):
     conn = get_connection()
     cursor = conn.cursor()
@@ -64,6 +50,7 @@ def afficher_dossier_article(num_racine, lang='FR'):
         OR numero_article_isole LIKE ?
         ORDER BY CAST(numero_article_isole AS INTEGER) ASC
     """, (str(num_racine), str(num_racine) + "-%"))
+    
     articles = cursor.fetchall()
     conn.close()
 
@@ -78,9 +65,10 @@ def afficher_dossier_article(num_racine, lang='FR'):
         st.success(f"### 🎯 {l['dossier']} {num_racine}")
         for art in articles:
             with st.container():
-                titre = art['affichage_article'] if 'affichage_article' in art.keys() else f"Article {art['numero_article_isole']}"
+                cols = art.keys()
+                titre = art['affichage_article'] if 'affichage_article' in cols else f"Article {art['numero_article_isole']}"
                 st.markdown(f"#### 📄 {titre}")
-                if col_resume in art.keys() and art[col_resume]:
+                if col_resume in cols and art[col_resume]:
                     st.info(f"**💡 {l['essentiel']}** {art[col_resume]}")
                 with st.expander(f"⚖️ {l['officiel']} ({art['numero_article_isole']})"):
                     st.write(art['texte_integral'])
@@ -95,49 +83,15 @@ if 'step' not in st.session_state:
 if 'langue_choisie' not in st.session_state:
     st.session_state.langue_choisie = "Français"
 
-# --- 5. BANDEAU DE NAVIGATION (DRAPEAUX + MENU MÉTIER) ---
+# --- 5. SÉLECTEUR DE LANGUE (VISIBLE EN HAUT) ---
 col_l1, col_l2 = st.columns(2)
 with col_l1:
-    if st.button("🇫🇷", key="lang_fr"):
-        st.session_state.langue_choisie = "Français"; st.rerun()
+    if st.button("🇫🇷 Français"):
+        st.session_state.langue_choisie = "Français"
+        st.rerun()
 with col_l2:
-    if st.button("🇬🇧", key="lang_en"):
-        st.session_state.langue_choisie = "English"; st.rerun()
-
-# Menu déroulant pour le métier (Remplace l'étape 1)
-metiers_dict = {
-    "Français": {
-        "Choisir un métier...": None,
-        "🍼 Assistant Maternel": "art_am",
-        "👶 Assistant Parental": "art_ef",
-        "🏠 Employé Familial": "art_ef",
-        "👵 Assistant de Vie": "art_ef",
-        "🌳 Autres": "art_sc"
-    },
-    "English": {
-        "Choose a job...": None,
-        "🍼 Childminder": "art_am",
-        "👶 Nanny": "art_ef",
-        "🏠 Domestic Worker": "art_ef",
-        "👵 Care Assistant": "art_ef",
-        "🌳 Others": "art_sc"
-    }
-}
-
-options = list(metiers_dict[st.session_state.langue_choisie].keys())
-index_m = 0
-if 'metier_label' in st.session_state.choix:
-    if st.session_state.choix['metier_label'] in options:
-        index_m = options.index(st.session_state.choix['metier_label'])
-
-selected = st.selectbox("Votre métier :", options=options, index=index_m)
-
-# Si un métier est sélectionné, on met à jour la session
-if metiers_dict[st.session_state.langue_choisie][selected] is not None:
-    if st.session_state.choix.get('metier_label') != selected:
-        st.session_state.choix['metier_label'] = selected
-        st.session_state.choix['colonne_metier'] = metiers_dict[st.session_state.langue_choisie][selected]
-        st.session_state.step = 2 # On passe à la suite
+    if st.button("🇬🇧 English"):
+        st.session_state.langue_choisie = "English"
         st.rerun()
 
 lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
@@ -145,18 +99,41 @@ lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
 # --- 6. DICTIONNAIRE D'INTERFACE ---
 UI = {
     'FR': {
-        'titre': "⚖️ Guide CCN 3239", 'recherche_label': "Recherche directe par n° d'article",
-        'btn_aller': "Aller", 'btn_home': "🏠 Accueil", 'btn_retour': "⬅️ Retour",
-        'step2': "2️⃣ Quel est le moment ?", 'step3': "3️⃣ Choisissez une catégorie",
-        'step4': "4️⃣ Précisez votre sujet", 'step5': "5️⃣ Quelle est votre question ?"
+        'titre': "⚖️ Guide CCN 3239",
+        'recherche_label': "Recherche directe par n° d'article",
+        'btn_aller': "Aller",
+        'btn_home': "🏠 Accueil",
+        'btn_retour': "⬅️ Retour",
+        'intro': "**Bienvenue !** 🚀\nTrouvez votre réponse en quelques clics.",
+        'step1': "1️⃣ Quel est votre métier ?",
+        'step2': "2️⃣ Quel est le moment ?",
+        'step3': "3️⃣ Choisissez une catégorie",
+        'step4': "4️⃣ Précisez votre sujet",
+        'step5': "5️⃣ Quelle est votre question ?",
+        'metiers': {
+            "🍼 Assistant Maternel": "art_am", "👶 Assistant Parental": "art_ef", 
+            "🏠 Employé Familial": "art_ef", "👵 Assistant de Vie": "art_ef", "🌳 Autres": "art_sc"
+        }
     },
     'EN': {
-        'titre': "⚖️ 3239 Agreement Guide", 'recherche_label': "Direct search (Article #)",
-        'btn_aller': "Go", 'btn_home': "🏠 Home", 'btn_retour': "⬅️ Back",
-        'step2': "2️⃣ What is the timing?", 'step3': "3️⃣ Choose a category",
-        'step4': "4️⃣ Specify your subject", 'step5': "5️⃣ What is your question?"
+        'titre': "⚖️ 3239 Agreement Guide",
+        'recherche_label': "Direct search (Article #)",
+        'btn_aller': "Go",
+        'btn_home': "🏠 Home",
+        'btn_retour': "⬅️ Back",
+        'intro': "**Welcome!** 🚀\nFind your answer in a few clicks.",
+        'step1': "1️⃣ What is your job?",
+        'step2': "2️⃣ What is the timing?",
+        'step3': "3️⃣ Choose a category",
+        'step4': "4️⃣ Specify your subject",
+        'step5': "5️⃣ What is your question?",
+        'metiers': {
+            "🍼 Childminder": "art_am", "👶 Nanny": "art_ef", 
+            "🏠 Domestic Worker": "art_ef", "👵 Care Assistant": "art_ef", "🌳 Others": "art_sc"
+        }
     }
 }
+
 txt = UI[lang_code]
 st.title(txt['titre'])
 
@@ -166,22 +143,32 @@ with st.expander(f"🔍 {txt['recherche_label']}"):
     with col1:
         art_direct = st.text_input("Ex: 139", key="search_input", label_visibility="collapsed")
     with col2:
-        if st.button(txt['btn_aller'], key="go_search"):
+        if st.button(txt['btn_aller']):
             if art_direct:
-                st.session_state.step = "DIRECT"; st.session_state.art_cible = art_direct; st.rerun()
+                st.session_state.step = "DIRECT"
+                st.session_state.art_cible = art_direct
+                st.rerun()
 
 if st.session_state.step != 1:
-    if st.button(txt['btn_home'], key="home_main"):
-        st.session_state.step = 1; st.session_state.choix = {}; st.rerun()
+    if st.button(txt['btn_home']):
+        st.session_state.step = 1
+        st.session_state.choix = {}
+        st.rerun()
 
 st.divider()
 
-# --- 8. LOGIQUE DE NAVIGATION ---
+# --- 8. LOGIQUE DE NAVIGATION (ÉTAPES 1 À 6) ---
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible, lang_code)
 
 elif st.session_state.step == 1:
-    st.info("👋 Bienvenue ! Veuillez sélectionner votre métier dans le menu ci-dessus pour commencer." if lang_code == 'FR' else "👋 Welcome! Please select your job in the menu above to start.")
+    st.info(txt['intro'])
+    st.subheader(txt['step1'])
+    for label, col in txt['metiers'].items():
+        if st.button(label):
+            st.session_state.choix['colonne_metier'] = col
+            st.session_state.step = 2
+            st.rerun()
 
 elif st.session_state.step == 2:
     st.subheader(txt['step2'])
@@ -191,17 +178,62 @@ elif st.session_state.step == 2:
     etapes = [r[0] for r in cursor.fetchall()]; conn.close()
     for e in etapes:
         if st.button(e):
-            st.session_state.choix['etape_val'] = e; st.session_state.step = 3; st.rerun()
+            st.session_state.choix['etape_val'] = e
+            st.session_state.step = 3
+            st.rerun()
+    if st.button(txt['btn_retour']): st.session_state.step = 1; st.rerun()
 
 elif st.session_state.step == 3:
     st.subheader(txt['step3'])
     conn = get_connection(); cursor = conn.cursor()
     col_fam = "famille" if lang_code == 'FR' else "famille_en"
-    cursor.execute(f"SELECT DISTINCT {col_fam} FROM questions WHERE etape_vie = ?", (st.session_state.choix['etape_val'],))
+    col_etp = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
+    cursor.execute(f"SELECT DISTINCT {col_fam} FROM questions WHERE {col_etp} = ?", (st.session_state.choix['etape_val'],))
     familles = [r[0] for r in cursor.fetchall() if r[0]]; conn.close()
     for f in familles:
         if st.button(f):
-            st.session_state.choix['famille_val'] = f; st.session_state.step = 4; st.rerun()
+            st.session_state.choix['famille_val'] = f
+            st.session_state.step = 4
+            st.rerun()
     if st.button(txt['btn_retour']): st.session_state.step = 2; st.rerun()
 
-# ... (Continuez avec les étapes 4, 5 et 6 comme dans votre code initial)
+elif st.session_state.step == 4:
+    st.subheader(txt['step4'])
+    conn = get_connection(); cursor = conn.cursor()
+    col_th = "theme" if lang_code == 'FR' else "theme_en"
+    col_fam = "famille" if lang_code == 'FR' else "famille_en"
+    cursor.execute(f"SELECT DISTINCT {col_th} FROM questions WHERE {col_fam} = ?", (st.session_state.choix['famille_val'],))
+    themes = [r[0] for r in cursor.fetchall() if r[0]]; conn.close()
+    for t in themes:
+        if st.button(t):
+            st.session_state.choix['theme'] = t
+            st.session_state.step = 5
+            st.rerun()
+    if st.button(txt['btn_retour']): st.session_state.step = 3; st.rerun()
+
+elif st.session_state.step == 5:
+    st.subheader(txt['step5'])
+    conn = get_connection(); cursor = conn.cursor()
+    col_q = "question_claire" if lang_code == 'FR' else "question_en"
+    col_th = "theme" if lang_code == 'FR' else "theme_en"
+    cursor.execute(f"SELECT id, {col_q} FROM questions WHERE {col_th} = ?", (st.session_state.choix['theme'],))
+    questions = cursor.fetchall(); conn.close()
+    for q in questions:
+        if st.button(q[col_q]):
+            st.session_state.choix['id_question'] = q['id']
+            st.session_state.step = 6
+            st.rerun()
+    if st.button(txt['btn_retour']): st.session_state.step = 4; st.rerun()
+
+elif st.session_state.step == 6:
+    conn = get_connection(); cursor = conn.cursor()
+    col_metier = st.session_state.choix['colonne_metier']
+    id_q = st.session_state.choix['id_question']
+    cursor.execute(f"SELECT {col_metier} FROM questions WHERE id = ?", (id_q,))
+    res = cursor.fetchone()
+    conn.close()
+    if res and res[0]:
+        afficher_dossier_article(str(res[0]).strip(), lang_code)
+    else:
+        st.warning("⚠️ Article non renseigné.")
+    if st.button(txt['btn_retour']): st.session_state.step = 5; st.rerun()
