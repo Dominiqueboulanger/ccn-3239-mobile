@@ -5,25 +5,14 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- 2. DESIGN (FORÇAGE ALIGNEMENT & COULEURS) ---
+# --- 2. DESIGN (STRUCTURE VERTICALE & COULEURS) ---
 st.markdown("""
     <style>
-    /* Réduction drastique de l'espace entre les colonnes */
-    [data-testid="stHorizontalBlock"] {
-        gap: 0.2rem !important;
-    }
-
-    /* Largeurs fixes pour les drapeaux afin de libérer de la place pour le socle */
-    [data-testid="column"]:nth-of-type(1), 
-    [data-testid="column"]:nth-of-type(2) {
-        width: 42px !important;
-        flex: none !important;
-    }
-    
-    /* La colonne du socle prend tout le reste de l'espace */
-    [data-testid="column"]:nth-of-type(3) {
-        flex: 1 1 auto !important;
-        min-width: 0px !important;
+    /* Centrage des colonnes pour les drapeaux */
+    [data-testid="column"] {
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 
     /* Style des boutons drapeaux : pas de cadre, juste l'émoji */
@@ -31,27 +20,27 @@ st.markdown("""
         border: none !important;
         background: transparent !important;
         padding: 0px !important;
-        height: 35px !important;
-        font-size: 24px !important;
+        height: 45px !important;
+        font-size: 30px !important;
         box-shadow: none !important;
     }
 
-    /* Badge du Socle : Forçage du noir et taille réduite pour mobile */
+    /* Badge du Socle : Deuxième ligne, bien visible */
     .socle-badge {
         background-color: #f0f2f6;
         border: 1px solid #d1d5db; 
-        border-radius: 6px;
+        border-radius: 8px;
         text-align: center; 
-        font-size: 10px !important; 
+        font-size: 14px !important; 
         font-weight: bold;
-        color: #000000 !important; /* Force le noir peu importe le thème */
-        height: 35px;
+        color: #000000 !important; /* Texte noir forcé */
+        height: 45px;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0 5px;
+        margin-top: 10px;
         width: 100%;
-        line-height: 1;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
     }
 
     /* Boutons de navigation principaux */
@@ -65,13 +54,12 @@ st.markdown("""
         border: 1px solid #E0E0E0 !important;
     }
     
-    /* Force la couleur dans les champs de saisie */
     .stTextInput > div > div > input {
         color: #000000 !important;
         background-color: #FFFFFF !important;
     }
 
-    h1 { font-size: 22px !important; }
+    h1 { font-size: 24px !important; text-align: center; }
     h2, h3 { color: #1e293b; }
     </style>
     """, unsafe_allow_html=True)
@@ -105,10 +93,10 @@ def afficher_dossier_article(num_racine, lang='FR'):
         st.success(f"### 🎯 {l['dossier']} {num_racine}")
         for art in articles:
             with st.container():
-                cols = art.keys()
-                titre = art['affichage_article'] if 'affichage_article' in cols else f"Article {art['numero_article_isole']}"
+                cols_names = art.keys()
+                titre = art['affichage_article'] if 'affichage_article' in cols_names else f"Article {art['numero_article_isole']}"
                 st.markdown(f"#### 📄 {titre}")
-                if col_resume in cols and art[col_resume]:
+                if col_resume in cols_names and art[col_resume]:
                     st.info(f"**💡 {l['essentiel']}** {art[col_resume]}")
                 with st.expander(f"⚖️ {l['officiel']}"):
                     st.write(art['texte_integral'])
@@ -151,14 +139,14 @@ UI = {
     }
 }
 
-# --- 6. BARRE SUPÉRIEURE (DRAPEAUX + SOCLE) ---
-c1, c2, c3 = st.columns([0.15, 0.15, 0.7])
+# --- 6. BARRE SUPÉRIEURE (LIGNE 1 : DRAPEAUX) ---
+lang_col1, lang_col2 = st.columns(2)
 
-with c1:
+with lang_col1:
     if st.button("🇫🇷", key="lang_fr"):
         st.session_state.langue_choisie = "Français"
         st.rerun()
-with c2:
+with lang_col2:
     if st.button("🇬🇧", key="lang_en"):
         st.session_state.langue_choisie = "English"
         st.rerun()
@@ -166,21 +154,21 @@ with c2:
 lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
 txt = UI[lang_code]
 
-with c3:
-    if 'colonne_metier' in st.session_state.choix:
-        nom_socle = txt['socles'].get(st.session_state.choix['colonne_metier'], "")
-        st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div class="socle-badge">-</div>', unsafe_allow_html=True)
+# --- 7. BARRE SUPÉRIEURE (LIGNE 2 : RAPPEL SOCLE) ---
+if 'colonne_metier' in st.session_state.choix:
+    nom_socle = txt['socles'].get(st.session_state.choix['colonne_metier'], "")
+    st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
+else:
+    st.markdown('<div class="socle-badge">Choisissez un métier</div>' if lang_code == 'FR' else '<div class="socle-badge">Choose a job</div>', unsafe_allow_html=True)
 
 st.title(txt['titre'])
 
-# --- 7. RECHERCHE RAPIDE ---
+# --- 8. RECHERCHE RAPIDE ---
 with st.expander(f"🔍 {txt['recherche_label']}"):
-    col1, col2 = st.columns([3, 1])
-    with col1:
+    col_search, col_btn = st.columns([3, 1])
+    with col_search:
         art_direct = st.text_input("Ex: 139", key="search_input", label_visibility="collapsed")
-    with col2:
+    with col_btn:
         if st.button(txt['btn_aller']):
             if art_direct:
                 st.session_state.step = "DIRECT"; st.session_state.art_cible = art_direct; st.rerun()
@@ -191,7 +179,7 @@ if st.session_state.step != 1:
 
 st.divider()
 
-# --- 8. LOGIQUE DE NAVIGATION ---
+# --- 9. LOGIQUE DE NAVIGATION ---
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible, lang_code)
 
