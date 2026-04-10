@@ -5,40 +5,51 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- 2. DESIGN (ALIGNEMENT HORIZONTAL & FORÇAGE NOIR) ---
+# --- 2. DESIGN (FORÇAGE LIGNE UNIQUE) ---
 st.markdown("""
     <style>
-    /* Réduction des marges entre colonnes pour gagner de la place */
-    [data-testid="stHorizontalBlock"] {
-        gap: 0.5rem !important;
-        align-items: center !important;
+    /* Conteneur personnalisé pour forcer l'alignement horizontal sur mobile */
+    .header-container {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        margin-bottom: 20px;
+        gap: 10px;
     }
 
-    /* Style des boutons drapeaux (sans cadre) */
+    .flags-group {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+    }
+
+    /* Style des boutons drapeaux transparents */
     div.stButton > button[key^="lang_"] {
         border: none !important;
         background: transparent !important;
         padding: 0px !important;
         height: 40px !important;
-        font-size: 25px !important;
+        width: 40px !important;
+        font-size: 28px !important;
         box-shadow: none !important;
     }
 
-    /* Badge du Socle : Largeur réduite à 50% pour tenir sur la ligne */
+    /* Badge du Socle : Largeur fixe de 50% avec texte centré */
     .socle-badge {
         background-color: #f0f2f6;
         border: 1px solid #d1d5db; 
         border-radius: 8px;
         text-align: center; 
-        font-size: 13px !important; /* Ajusté pour éviter le débordement */
+        font-size: 13px !important; 
         font-weight: bold;
-        color: #000000 !important; /* Noir forcé pour écrans sombres */
+        color: #000000 !important;
         height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 50%; /* Votre solution pour libérer de l'espace */
-        margin-left: auto; /* Aligne le badge à droite de sa colonne */
+        width: 60%; /* Ajusté pour laisser de la place aux drapeaux */
         box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
     }
 
@@ -137,27 +148,37 @@ UI = {
     }
 }
 
-# --- 6. BARRE SUPÉRIEURE (LIGNE UNIQUE : DRAPEAUX + SOCLE) ---
-c1, c2, c3 = st.columns([1, 1, 3])
-
-with c1:
-    if st.button("🇫🇷", key="lang_fr"):
-        st.session_state.langue_choisie = "Français"
-        st.rerun()
-with c2:
-    if st.button("🇬🇧", key="lang_en"):
-        st.session_state.langue_choisie = "English"
-        st.rerun()
-
 lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
 txt = UI[lang_code]
 
-with c3:
+# --- 6. BARRE SUPÉRIEURE (HTML PERSONNALISÉ POUR FORCER L'ALIGNEMENT) ---
+# On utilise des colonnes Streamlit mais avec un CSS qui empêche le wrap
+cols = st.columns([1, 1, 4])
+
+with cols[0]:
+    if st.button("🇫🇷", key="lang_fr"):
+        st.session_state.langue_choisie = "Français"
+        st.rerun()
+with cols[1]:
+    if st.button("🇬🇧", key="lang_en"):
+        st.session_state.langue_choisie = "English"
+        st.rerun()
+with cols[2]:
     if 'colonne_metier' in st.session_state.choix:
         nom_socle = txt['socles'].get(st.session_state.choix['colonne_metier'], "")
         st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
     else:
         st.markdown(f'<div class="socle-badge">-</div>', unsafe_allow_html=True)
+
+# Application d'un correctif CSS final pour forcer le comportement horizontal des colonnes
+st.markdown("""
+    <style>
+    /* Force les colonnes à rester sur une seule ligne même sur mobile */
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title(txt['titre'])
 
@@ -190,7 +211,7 @@ elif st.session_state.step == 1:
             st.session_state.step = 2; st.rerun()
 
 elif st.session_state.step == 2:
-    st.subheader(txt.get('step2', "2️⃣ Moment ?"))
+    st.subheader("2️⃣ Moment ?" if lang_code == 'FR' else "2️⃣ When?")
     conn = get_connection(); cursor = conn.cursor()
     col_db = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
     cursor.execute(f"SELECT DISTINCT {col_db} FROM questions WHERE {col_db} IS NOT NULL AND {col_db} != ''")
@@ -201,7 +222,7 @@ elif st.session_state.step == 2:
     if st.button(txt['btn_retour']): st.session_state.step = 1; st.rerun()
 
 elif st.session_state.step == 3:
-    st.subheader(txt.get('step3', "3️⃣ Catégorie"))
+    st.subheader("3️⃣ Catégorie" if lang_code == 'FR' else "3️⃣ Category")
     conn = get_connection(); cursor = conn.cursor()
     col_fam = "famille" if lang_code == 'FR' else "famille_en"
     col_etp = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
@@ -213,7 +234,7 @@ elif st.session_state.step == 3:
     if st.button(txt['btn_retour']): st.session_state.step = 2; st.rerun()
 
 elif st.session_state.step == 4:
-    st.subheader(txt.get('step4', "4️⃣ Sujet"))
+    st.subheader("4️⃣ Sujet" if lang_code == 'FR' else "4️⃣ Subject")
     conn = get_connection(); cursor = conn.cursor()
     col_th = "theme" if lang_code == 'FR' else "theme_en"
     col_fam = "famille" if lang_code == 'FR' else "famille_en"
@@ -225,7 +246,7 @@ elif st.session_state.step == 4:
     if st.button(txt['btn_retour']): st.session_state.step = 3; st.rerun()
 
 elif st.session_state.step == 5:
-    st.subheader(txt.get('step5', "5️⃣ Question"))
+    st.subheader("5️⃣ Question")
     conn = get_connection(); cursor = conn.cursor()
     col_q = "question_claire" if lang_code == 'FR' else "question_en"
     col_th = "theme" if lang_code == 'FR' else "theme_en"
