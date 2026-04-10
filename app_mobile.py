@@ -5,41 +5,40 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- 2. DESIGN (STRUCTURE VERTICALE & COULEURS) ---
+# --- 2. DESIGN (ALIGNEMENT HORIZONTAL & FORÇAGE NOIR) ---
 st.markdown("""
     <style>
-    /* Centrage des colonnes pour les drapeaux */
-    [data-testid="column"] {
-        display: flex;
-        justify-content: center;
-        align-items: center;
+    /* Réduction des marges entre colonnes pour gagner de la place */
+    [data-testid="stHorizontalBlock"] {
+        gap: 0.5rem !important;
+        align-items: center !important;
     }
 
-    /* Style des boutons drapeaux : pas de cadre, juste l'émoji */
+    /* Style des boutons drapeaux (sans cadre) */
     div.stButton > button[key^="lang_"] {
         border: none !important;
         background: transparent !important;
         padding: 0px !important;
-        height: 45px !important;
-        font-size: 30px !important;
+        height: 40px !important;
+        font-size: 25px !important;
         box-shadow: none !important;
     }
 
-    /* Badge du Socle : Deuxième ligne, bien visible */
+    /* Badge du Socle : Largeur réduite à 50% pour tenir sur la ligne */
     .socle-badge {
         background-color: #f0f2f6;
         border: 1px solid #d1d5db; 
         border-radius: 8px;
         text-align: center; 
-        font-size: 20px !important; 
+        font-size: 13px !important; /* Ajusté pour éviter le débordement */
         font-weight: bold;
-        color: #000000 !important; /* Texte noir forcé */
-        height: 45px;
+        color: #000000 !important; /* Noir forcé pour écrans sombres */
+        height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-top: 10px;
-        width: 50%;
+        width: 50%; /* Votre solution pour libérer de l'espace */
+        margin-left: auto; /* Aligne le badge à droite de sa colonne */
         box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
     }
 
@@ -59,8 +58,7 @@ st.markdown("""
         background-color: #FFFFFF !important;
     }
 
-    h1 { font-size: 24px !important; text-align: center; }
-    h2, h3 { color: #1e293b; }
+    h1 { font-size: 22px !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -139,14 +137,14 @@ UI = {
     }
 }
 
-# --- 6. BARRE SUPÉRIEURE (LIGNE 1 : DRAPEAUX) ---
-lang_col1, lang_col2 = st.columns(2)
+# --- 6. BARRE SUPÉRIEURE (LIGNE UNIQUE : DRAPEAUX + SOCLE) ---
+c1, c2, c3 = st.columns([1, 1, 3])
 
-with lang_col1:
+with c1:
     if st.button("🇫🇷", key="lang_fr"):
         st.session_state.langue_choisie = "Français"
         st.rerun()
-with lang_col2:
+with c2:
     if st.button("🇬🇧", key="lang_en"):
         st.session_state.langue_choisie = "English"
         st.rerun()
@@ -154,16 +152,16 @@ with lang_col2:
 lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
 txt = UI[lang_code]
 
-# --- 7. BARRE SUPÉRIEURE (LIGNE 2 : RAPPEL SOCLE) ---
-if 'colonne_metier' in st.session_state.choix:
-    nom_socle = txt['socles'].get(st.session_state.choix['colonne_metier'], "")
-    st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="socle-badge">Choisissez un métier</div>' if lang_code == 'FR' else '<div class="socle-badge">Choose a job</div>', unsafe_allow_html=True)
+with c3:
+    if 'colonne_metier' in st.session_state.choix:
+        nom_socle = txt['socles'].get(st.session_state.choix['colonne_metier'], "")
+        st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="socle-badge">-</div>', unsafe_allow_html=True)
 
 st.title(txt['titre'])
 
-# --- 8. RECHERCHE RAPIDE ---
+# --- 7. RECHERCHE RAPIDE ---
 with st.expander(f"🔍 {txt['recherche_label']}"):
     col_search, col_btn = st.columns([3, 1])
     with col_search:
@@ -179,7 +177,7 @@ if st.session_state.step != 1:
 
 st.divider()
 
-# --- 9. LOGIQUE DE NAVIGATION ---
+# --- 8. LOGIQUE DE NAVIGATION ---
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible, lang_code)
 
@@ -192,7 +190,7 @@ elif st.session_state.step == 1:
             st.session_state.step = 2; st.rerun()
 
 elif st.session_state.step == 2:
-    st.subheader("2️⃣ Moment ?" if lang_code == 'FR' else "2️⃣ When?")
+    st.subheader(txt.get('step2', "2️⃣ Moment ?"))
     conn = get_connection(); cursor = conn.cursor()
     col_db = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
     cursor.execute(f"SELECT DISTINCT {col_db} FROM questions WHERE {col_db} IS NOT NULL AND {col_db} != ''")
@@ -203,7 +201,7 @@ elif st.session_state.step == 2:
     if st.button(txt['btn_retour']): st.session_state.step = 1; st.rerun()
 
 elif st.session_state.step == 3:
-    st.subheader("3️⃣ Catégorie" if lang_code == 'FR' else "3️⃣ Category")
+    st.subheader(txt.get('step3', "3️⃣ Catégorie"))
     conn = get_connection(); cursor = conn.cursor()
     col_fam = "famille" if lang_code == 'FR' else "famille_en"
     col_etp = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
@@ -215,7 +213,7 @@ elif st.session_state.step == 3:
     if st.button(txt['btn_retour']): st.session_state.step = 2; st.rerun()
 
 elif st.session_state.step == 4:
-    st.subheader("4️⃣ Sujet" if lang_code == 'FR' else "4️⃣ Subject")
+    st.subheader(txt.get('step4', "4️⃣ Sujet"))
     conn = get_connection(); cursor = conn.cursor()
     col_th = "theme" if lang_code == 'FR' else "theme_en"
     col_fam = "famille" if lang_code == 'FR' else "famille_en"
@@ -227,7 +225,7 @@ elif st.session_state.step == 4:
     if st.button(txt['btn_retour']): st.session_state.step = 3; st.rerun()
 
 elif st.session_state.step == 5:
-    st.subheader("5️⃣ Question")
+    st.subheader(txt.get('step5', "5️⃣ Question"))
     conn = get_connection(); cursor = conn.cursor()
     col_q = "question_claire" if lang_code == 'FR' else "question_en"
     col_th = "theme" if lang_code == 'FR' else "theme_en"
