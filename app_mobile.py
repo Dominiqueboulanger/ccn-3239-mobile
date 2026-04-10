@@ -49,7 +49,7 @@ st.markdown("""
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 40%; /* Ajusté pour laisser de la place aux drapeaux */
+        width: 30%; /* Ajusté pour laisser de la place aux drapeaux */
         box-shadow: 0px 2px 4px rgba(0,0,0,0.05);
     }
 
