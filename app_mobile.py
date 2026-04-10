@@ -16,7 +16,7 @@ st.markdown("""
         justify-content: space-between;
         width: 100%;
         margin-bottom: 20px;
-        gap: 10px;
+        gap: 1px;
     }
 
     .flags-group {
