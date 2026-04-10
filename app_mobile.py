@@ -27,7 +27,7 @@ st.markdown("""
 
     /* Style des boutons drapeaux transparents */
     div.stButton > button[key^="lang_"] {
-        border: none !important;
+        border: 0px !important;
         background: transparent !important;
         padding: 0px !important;
         height: 20px !important;
