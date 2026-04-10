@@ -31,7 +31,7 @@ st.markdown("""
         border: 1px solid #d1d5db; 
         border-radius: 8px;
         text-align: center; 
-        font-size: 14px !important; 
+        font-size: 20px !important; 
         font-weight: bold;
         color: #000000 !important; /* Texte noir forcé */
         height: 45px;
