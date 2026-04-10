@@ -5,79 +5,81 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- 2. DESIGN ULTRA-COMPACT ET FORÇAGE COULEURS ---
+# --- 2. DESIGN (FORÇAGE ALIGNEMENT & COULEURS) ---
 st.markdown("""
     <style>
-    /* Force l'alignement horizontal et supprime les espaces inutiles */
-    [data-testid="column"] {
-        width: fit-content !important;
-        flex: 1 1 0% !important;
-        min-width: 0px !important;
-    }
+    /* Réduction drastique de l'espace entre les colonnes */
     [data-testid="stHorizontalBlock"] {
-        gap: 0.3rem !important;
-        align-items: center !important;
+        gap: 0.2rem !important;
     }
 
-    /* Badge du Socle : Police minuscule et texte noir forcé */
+    /* Définition de largeurs fixes très petites pour les drapeaux */
+    [data-testid="column"]:nth-of-type(1), 
+    [data-testid="column"]:nth-of-type(2) {
+        width: 45px !important;
+        flex: none !important;
+    }
+    
+    /* La colonne du socle prend le reste de la place */
+    [data-testid="column"]:nth-of-type(3) {
+        flex: 1 1 auto !important;
+        min-width: 0px !important;
+    }
+
+    /* Style des boutons drapeaux (sans bordures inutiles) */
+    div.stButton > button[key^="lang_"] {
+        border: none !important;
+        background: transparent !important;
+        padding: 0px !important;
+        height: 35px !important;
+        font-size: 24px !important;
+    }
+
+    /* Badge du Socle : Forçage du noir et réduction de taille */
     .socle-badge {
         background-color: #f0f2f6;
         border: 1px solid #d1d5db; 
         border-radius: 6px;
         text-align: center; 
-        font-size: 9px !important; 
+        font-size: 10px !important; 
         font-weight: bold;
-        color: #000000 !important; /* NOIR FORCÉ */
+        color: #000000 !important; /* Texte noir pour écran sombre */
         height: 35px;
         display: flex;
         align-items: center;
         justify-content: center;
-        line-height: 1;
-        padding: 0 4px;
+        padding: 0 5px;
         width: 100%;
     }
 
-    /* Style des liens images (drapeaux) */
-    .flag-link {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 35px;
+    /* Correction globale pour le mode sombre */
+    .stApp {
+        color: #000000;
     }
-    .flag-link img {
-        width: 30px;
-        transition: transform 0.2s;
-    }
-    .flag-link img:active {
-        transform: scale(0.9);
-    }
-
-    /* Style général des boutons et inputs */
-    div.stButton > button {
-        width: 100%;
-        height: 50px;
-        font-size: 15px;
-        border-radius: 10px;
-        background-color: #FFFFFF !important; 
-        color: #000000 !important; /* TEXTE NOIR */
-        border: 1px solid #E0E0E0 !important;
-    }
-    
-    .stTextInput > div > div > input {
-        color: #000000 !important;
-        background-color: #FFFFFF !important;
-    }
-
-    /* Titres plus petits pour mobile */
-    h1 { font-size: 20px !important; color: #1e293b; }
-    h2, h3 { font-size: 18px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-def get_connection():
-    conn = sqlite3.connect("CCN_3239.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+# --- 6. BARRE SUPÉRIEURE : ALIGNEMENT OPTIMISÉ ---
+# On utilise des ratios très précis pour laisser la place au texte du socle
+c1, c2, c3 = st.columns([0.15, 0.15, 0.7]) 
+
+with c1:
+    if st.button("🇫🇷", key="lang_fr"):
+        st.session_state.langue_choisie = "Français"
+        st.rerun()
+with c2:
+    if st.button("🇬🇧", key="lang_en"):
+        st.session_state.langue_choisie = "English"
+        st.rerun()
+
+with c3:
+    lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
+    # Utilisation du dictionnaire UI existant pour les noms de socles
+    if 'colonne_metier' in st.session_state.choix:
+        nom_socle = UI[lang_code]['socles'].get(st.session_state.choix['colonne_metier'], "")
+        st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="socle-badge">-</div>', unsafe_allow_html=True)
 
 # --- 3. FONCTION D'AFFICHAGE DES ARTICLES ---
 def afficher_dossier_article(num_racine, lang='FR'):
