@@ -5,10 +5,10 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- 2. DESIGN (CORRECTIF MODE SOMBRE + MOBILE) ---
+# --- 2. DESIGN (CORRECTIF MODE SOMBRE + ALIGNEMENT HAUT) ---
 st.markdown("""
     <style>
-    /* Force l'apparence des boutons : Texte noir sur fond blanc, même en mode sombre */
+    /* Boutons principaux (Métiers, Questions, etc.) */
     div.stButton > button {
         width: 100%;
         height: 60px;
@@ -21,7 +21,30 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
-    /* Force la visibilité du texte saisi par l'utilisateur */
+    /* Style spécifique pour les petits boutons de drapeaux en haut */
+    .btn-flag button {
+        height: 50px !important;
+        font-size: 22px !important;
+    }
+
+    /* Boîte de rappel du métier choisi */
+    .metier-badge {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0; 
+        padding: 5px 10px;
+        border-radius: 10px;
+        text-align: center; 
+        font-size: 13px;
+        font-weight: bold;
+        color: #1e293b;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.2;
+    }
+
+    /* Force la visibilité du texte saisi */
     .stTextInput > div > div > input {
         height: 50px;
         font-size: 18px;
@@ -29,7 +52,6 @@ st.markdown("""
         background-color: #FFFFFF !important;
     }
 
-    /* Couleurs de texte pour les titres et blocs d'info */
     h1, h2, h3, h4 { color: #2c3e50; }
     .stInfo, .stSuccess { color: #1e293b !important; }
     </style>
@@ -65,10 +87,10 @@ def afficher_dossier_article(num_racine, lang='FR'):
         st.success(f"### 🎯 {l['dossier']} {num_racine}")
         for art in articles:
             with st.container():
-                cols = art.keys()
-                titre = art['affichage_article'] if 'affichage_article' in cols else f"Article {art['numero_article_isole']}"
+                cols_art = art.keys()
+                titre = art['affichage_article'] if 'affichage_article' in cols_art else f"Article {art['numero_article_isole']}"
                 st.markdown(f"#### 📄 {titre}")
-                if col_resume in cols and art[col_resume]:
+                if col_resume in cols_art and art[col_resume]:
                     st.info(f"**💡 {l['essentiel']}** {art[col_resume]}")
                 with st.expander(f"⚖️ {l['officiel']} ({art['numero_article_isole']})"):
                     st.write(art['texte_integral'])
@@ -83,32 +105,15 @@ if 'step' not in st.session_state:
 if 'langue_choisie' not in st.session_state:
     st.session_state.langue_choisie = "Français"
 
-# --- 5. SÉLECTEUR DE LANGUE (VISIBLE EN HAUT) ---
-col_l1, col_l2 = st.columns(2)
-with col_l1:
-    if st.button("🇫🇷 Français"):
-        st.session_state.langue_choisie = "Français"
-        st.rerun()
-with col_l2:
-    if st.button("🇬🇧 English"):
-        st.session_state.langue_choisie = "English"
-        st.rerun()
-
-lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
-
-# --- 6. DICTIONNAIRE D'INTERFACE ---
+# --- 5. DICTIONNAIRE D'INTERFACE (Placé ici pour le rappel métier) ---
 UI = {
     'FR': {
         'titre': "⚖️ Guide CCN 3239",
         'recherche_label': "Recherche directe par n° d'article",
-        'btn_aller': "Aller",
-        'btn_home': "🏠 Accueil",
-        'btn_retour': "⬅️ Retour",
+        'btn_aller': "Aller", 'btn_home': "🏠 Accueil", 'btn_retour': "⬅️ Retour",
         'intro': "**Bienvenue !** 🚀\nTrouvez votre réponse en quelques clics.",
-        'step1': "1️⃣ Quel est votre métier ?",
-        'step2': "2️⃣ Quel est le moment ?",
-        'step3': "3️⃣ Choisissez une catégorie",
-        'step4': "4️⃣ Précisez votre sujet",
+        'step1': "1️⃣ Quel est votre métier ?", 'step2': "2️⃣ Quel est le moment ?",
+        'step3': "3️⃣ Choisissez une catégorie", 'step4': "4️⃣ Précisez votre sujet",
         'step5': "5️⃣ Quelle est votre question ?",
         'metiers': {
             "🍼 Assistant Maternel": "art_am", "👶 Assistant Parental": "art_ef", 
@@ -118,14 +123,10 @@ UI = {
     'EN': {
         'titre': "⚖️ 3239 Agreement Guide",
         'recherche_label': "Direct search (Article #)",
-        'btn_aller': "Go",
-        'btn_home': "🏠 Home",
-        'btn_retour': "⬅️ Back",
+        'btn_aller': "Go", 'btn_home': "🏠 Home", 'btn_retour': "⬅️ Back",
         'intro': "**Welcome!** 🚀\nFind your answer in a few clicks.",
-        'step1': "1️⃣ What is your job?",
-        'step2': "2️⃣ What is the timing?",
-        'step3': "3️⃣ Choose a category",
-        'step4': "4️⃣ Specify your subject",
+        'step1': "1️⃣ What is your job?", 'step2': "2️⃣ What is the timing?",
+        'step3': "3️⃣ Choose a category", 'step4': "4️⃣ Specify your subject",
         'step5': "5️⃣ What is your question?",
         'metiers': {
             "🍼 Childminder": "art_am", "👶 Nanny": "art_ef", 
@@ -134,7 +135,31 @@ UI = {
     }
 }
 
+# --- 6. BARRE SUPÉRIEURE : LANGUES & RAPPEL MÉTIER ---
+c1, c2, c3 = st.columns([1, 1, 3])
+with c1:
+    st.markdown('<div class="btn-flag">', unsafe_allow_html=True)
+    if st.button("🇫🇷"):
+        st.session_state.langue_choisie = "Français"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+with c2:
+    st.markdown('<div class="btn-flag">', unsafe_allow_html=True)
+    if st.button("🇬🇧"):
+        st.session_state.langue_choisie = "English"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
 txt = UI[lang_code]
+
+with c3:
+    if 'colonne_metier' in st.session_state.choix:
+        # On inverse le dico pour trouver le label à partir de la valeur technique (ex: art_am)
+        inv_metiers = {v: k for k, v in txt['metiers'].items()}
+        label_metier = inv_metiers.get(st.session_state.choix['colonne_metier'], "")
+        st.markdown(f'<div class="metier-badge">{label_metier}</div>', unsafe_allow_html=True)
+
 st.title(txt['titre'])
 
 # --- 7. RECHERCHE RAPIDE ---
@@ -157,7 +182,7 @@ if st.session_state.step != 1:
 
 st.divider()
 
-# --- 8. LOGIQUE DE NAVIGATION (ÉTAPES 1 À 6) ---
+# --- 8. LOGIQUE DE NAVIGATION ---
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible, lang_code)
 
