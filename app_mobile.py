@@ -25,15 +25,28 @@ st.markdown("""
         gap: 1px;
     }
 
-    /* Style des boutons drapeaux transparents */
-    div.stButton > button[key^="lang_"] {
-        border: 0px !important;
-        background: transparent !important;
-        padding: 0px !important;
-        height: 20px !important;
-        width: 20px !important;
-        font-size: 10px !important;
-        box-shadow: none !important;
+    /* Style des boutons drapeaux : suppression totale de tout contour */
+div.stButton > button[key^="lang_"] {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0px !important;
+    height: 40px !important;
+    width: 40px !important;
+    font-size: 28px !important;
+}
+
+/* On force aussi la suppression au survol et au clic */
+div.stButton > button[key^="lang_"]:hover, 
+div.stButton > button[key^="lang_"]:active, 
+div.stButton > button[key^="lang_"]:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    color: inherit !important;
+}
     }
 
     /* Badge du Socle : Largeur fixe de 50% avec texte centré */
