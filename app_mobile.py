@@ -13,29 +13,30 @@ st.markdown("""
         gap: 0.2rem !important;
     }
 
-    /* Définition de largeurs fixes très petites pour les drapeaux */
+    /* Largeurs fixes pour les drapeaux afin de libérer de la place pour le socle */
     [data-testid="column"]:nth-of-type(1), 
     [data-testid="column"]:nth-of-type(2) {
-        width: 45px !important;
+        width: 42px !important;
         flex: none !important;
     }
     
-    /* La colonne du socle prend le reste de la place */
+    /* La colonne du socle prend tout le reste de l'espace */
     [data-testid="column"]:nth-of-type(3) {
         flex: 1 1 auto !important;
         min-width: 0px !important;
     }
 
-    /* Style des boutons drapeaux (sans bordures inutiles) */
+    /* Style des boutons drapeaux : pas de cadre, juste l'émoji */
     div.stButton > button[key^="lang_"] {
         border: none !important;
         background: transparent !important;
         padding: 0px !important;
         height: 35px !important;
         font-size: 24px !important;
+        box-shadow: none !important;
     }
 
-    /* Badge du Socle : Forçage du noir et réduction de taille */
+    /* Badge du Socle : Forçage du noir et taille réduite pour mobile */
     .socle-badge {
         background-color: #f0f2f6;
         border: 1px solid #d1d5db; 
@@ -43,43 +44,42 @@ st.markdown("""
         text-align: center; 
         font-size: 10px !important; 
         font-weight: bold;
-        color: #000000 !important; /* Texte noir pour écran sombre */
+        color: #000000 !important; /* Force le noir peu importe le thème */
         height: 35px;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0 5px;
         width: 100%;
+        line-height: 1;
     }
 
-    /* Correction globale pour le mode sombre */
-    .stApp {
-        color: #000000;
+    /* Boutons de navigation principaux */
+    div.stButton > button {
+        width: 100%;
+        height: 55px;
+        font-size: 16px;
+        border-radius: 12px;
+        background-color: #FFFFFF !important; 
+        color: #000000 !important;           
+        border: 1px solid #E0E0E0 !important;
     }
+    
+    /* Force la couleur dans les champs de saisie */
+    .stTextInput > div > div > input {
+        color: #000000 !important;
+        background-color: #FFFFFF !important;
+    }
+
+    h1 { font-size: 22px !important; }
+    h2, h3 { color: #1e293b; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. BARRE SUPÉRIEURE : ALIGNEMENT OPTIMISÉ ---
-# On utilise des ratios très précis pour laisser la place au texte du socle
-c1, c2, c3 = st.columns([0.15, 0.15, 0.7]) 
-
-with c1:
-    if st.button("🇫🇷", key="lang_fr"):
-        st.session_state.langue_choisie = "Français"
-        st.rerun()
-with c2:
-    if st.button("🇬🇧", key="lang_en"):
-        st.session_state.langue_choisie = "English"
-        st.rerun()
-
-with c3:
-    lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
-    # Utilisation du dictionnaire UI existant pour les noms de socles
-    if 'colonne_metier' in st.session_state.choix:
-        nom_socle = UI[lang_code]['socles'].get(st.session_state.choix['colonne_metier'], "")
-        st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div class="socle-badge">-</div>', unsafe_allow_html=True)
+def get_connection():
+    conn = sqlite3.connect("CCN_3239.db")
+    conn.row_factory = sqlite3.Row
+    return conn
 
 # --- 3. FONCTION D'AFFICHAGE DES ARTICLES ---
 def afficher_dossier_article(num_racine, lang='FR'):
@@ -105,10 +105,10 @@ def afficher_dossier_article(num_racine, lang='FR'):
         st.success(f"### 🎯 {l['dossier']} {num_racine}")
         for art in articles:
             with st.container():
-                cols_art = art.keys()
-                titre = art['affichage_article'] if 'affichage_article' in cols_art else f"Article {art['numero_article_isole']}"
+                cols = art.keys()
+                titre = art['affichage_article'] if 'affichage_article' in cols else f"Article {art['numero_article_isole']}"
                 st.markdown(f"#### 📄 {titre}")
-                if col_resume in cols_art and art[col_resume]:
+                if col_resume in cols and art[col_resume]:
                     st.info(f"**💡 {l['essentiel']}** {art[col_resume]}")
                 with st.expander(f"⚖️ {l['officiel']}"):
                     st.write(art['texte_integral'])
@@ -123,22 +123,7 @@ if 'step' not in st.session_state:
 if 'langue_choisie' not in st.session_state:
     st.session_state.langue_choisie = "Français"
 
-# --- 5. LOGIQUE DES DRAPEAUX CLIQUABLES (SANS BOUTON) ---
-# On utilise des paramètres d'URL ou des boutons invisibles Streamlit pour changer la langue
-c1, c2, c3 = st.columns([0.6, 0.6, 2.5])
-
-with c1:
-    # Utilisation d'un bouton Streamlit mais stylisé via CSS pour ressembler à une simple icône
-    if st.button("🇫🇷", key="lang_fr", help="Français"):
-        st.session_state.langue_choisie = "Français"
-        st.rerun()
-with c2:
-    if st.button("🇬🇧", key="lang_en", help="English"):
-        st.session_state.langue_choisie = "English"
-        st.rerun()
-
-lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
-
+# --- 5. DICTIONNAIRE D'INTERFACE ---
 UI = {
     'FR': {
         'titre': "⚖️ Guide CCN 3239",
@@ -165,6 +150,20 @@ UI = {
         'socles': {"art_am": "ASSMAT Socle", "art_ef": "SPE Socle", "art_sc": "Common Socle"}
     }
 }
+
+# --- 6. BARRE SUPÉRIEURE (DRAPEAUX + SOCLE) ---
+c1, c2, c3 = st.columns([0.15, 0.15, 0.7])
+
+with c1:
+    if st.button("🇫🇷", key="lang_fr"):
+        st.session_state.langue_choisie = "Français"
+        st.rerun()
+with c2:
+    if st.button("🇬🇧", key="lang_en"):
+        st.session_state.langue_choisie = "English"
+        st.rerun()
+
+lang_code = 'FR' if st.session_state.langue_choisie == "Français" else 'EN'
 txt = UI[lang_code]
 
 with c3:
@@ -176,7 +175,7 @@ with c3:
 
 st.title(txt['titre'])
 
-# --- 6. RECHERCHE RAPIDE ---
+# --- 7. RECHERCHE RAPIDE ---
 with st.expander(f"🔍 {txt['recherche_label']}"):
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -192,7 +191,7 @@ if st.session_state.step != 1:
 
 st.divider()
 
-# --- 7. LOGIQUE DE NAVIGATION ---
+# --- 8. LOGIQUE DE NAVIGATION ---
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible, lang_code)
 
