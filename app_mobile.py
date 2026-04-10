@@ -14,8 +14,8 @@ st.markdown("""
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
-        width: 50%;
-        margin-bottom: 20px;
+        width: 100%;
+        margin-bottom: 10px;
         gap: 1px;
     }
 
@@ -42,7 +42,7 @@ st.markdown("""
         border: 1px solid #d1d5db; 
         border-radius: 8px;
         text-align: center; 
-        font-size: 13px !important; 
+        font-size: 10px !important; 
         font-weight: bold;
         color: #000000 !important;
         height: 40px;
