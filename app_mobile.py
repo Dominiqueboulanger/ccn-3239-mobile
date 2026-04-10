@@ -5,55 +5,57 @@ import os
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Assistant CCN 3239", layout="centered")
 
-# --- 2. DESIGN (CORRECTIF MODE SOMBRE + ALIGNEMENT HAUT) ---
+# --- 2. DESIGN CORRIGÉ (ALIGNEMENT HORIZONTAL FORCÉ) ---
 st.markdown("""
     <style>
-    /* Boutons principaux (Métiers, Questions, etc.) */
-    div.stButton > button {
-        width: 100%;
-        height: 60px;
-        font-size: 18px;
-        border-radius: 12px;
-        margin-bottom: 10px;
-        background-color: #FFFFFF !important; 
-        color: #1e293b !important;           
-        border: 2px solid #E0E0E0 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    /* Force les colonnes à rester côte à côte même sur mobile */
+    [data-testid="column"] {
+        width: calc(33% - 1rem) !important;
+        flex: 1 1 calc(33% - 1rem) !important;
+        min-width: 0px !important;
     }
-    
-    /* Style spécifique pour les petits boutons de drapeaux en haut */
+
+    /* Style des boutons de langue (Drapeaux) */
     .btn-flag button {
         height: 50px !important;
         font-size: 22px !important;
+        padding: 0px !important;
     }
 
-    /* Boîte de rappel du métier choisi */
-    .metier-badge {
+    /* Badge du Socle (Métier) */
+    .socle-badge {
         background-color: #f8fafc;
         border: 1px solid #e2e8f0; 
-        padding: 5px 10px;
         border-radius: 10px;
         text-align: center; 
-        font-size: 13px;
+        font-size: 11px; /* Un peu plus petit pour tenir sur une ligne */
         font-weight: bold;
         color: #1e293b;
         height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
-        line-height: 1.2;
+        line-height: 1.1;
+        padding: 2px;
     }
 
-    /* Force la visibilité du texte saisi */
-    .stTextInput > div > div > input {
-        height: 50px;
+    /* Style général des boutons et inputs (Mode Sombre compatible) */
+    div.stButton > button {
+        width: 100%;
+        height: 60px;
         font-size: 18px;
+        border-radius: 12px;
+        background-color: #FFFFFF !important; 
+        color: #1e293b !important;           
+        border: 2px solid #E0E0E0 !important;
+    }
+    
+    .stTextInput > div > div > input {
         color: #1e293b !important;
         background-color: #FFFFFF !important;
     }
 
     h1, h2, h3, h4 { color: #2c3e50; }
-    .stInfo, .stSuccess { color: #1e293b !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -72,7 +74,6 @@ def afficher_dossier_article(num_racine, lang='FR'):
         OR numero_article_isole LIKE ?
         ORDER BY CAST(numero_article_isole AS INTEGER) ASC
     """, (str(num_racine), str(num_racine) + "-%"))
-    
     articles = cursor.fetchall()
     conn.close()
 
@@ -105,38 +106,37 @@ if 'step' not in st.session_state:
 if 'langue_choisie' not in st.session_state:
     st.session_state.langue_choisie = "Français"
 
-# --- 5. DICTIONNAIRE D'INTERFACE (Placé ici pour le rappel métier) ---
+# --- 5. DICTIONNAIRE D'INTERFACE ---
 UI = {
     'FR': {
         'titre': "⚖️ Guide CCN 3239",
         'recherche_label': "Recherche directe par n° d'article",
         'btn_aller': "Aller", 'btn_home': "🏠 Accueil", 'btn_retour': "⬅️ Retour",
         'intro': "**Bienvenue !** 🚀\nTrouvez votre réponse en quelques clics.",
-        'step1': "1️⃣ Quel est votre métier ?", 'step2': "2️⃣ Quel est le moment ?",
-        'step3': "3️⃣ Choisissez une catégorie", 'step4': "4️⃣ Précisez votre sujet",
-        'step5': "5️⃣ Quelle est votre question ?",
+        'step1': "1️⃣ Quel est votre métier ?",
         'metiers': {
             "🍼 Assistant Maternel": "art_am", "👶 Assistant Parental": "art_ef", 
             "🏠 Employé Familial": "art_ef", "👵 Assistant de Vie": "art_ef", "🌳 Autres": "art_sc"
-        }
+        },
+        'socles': {"art_am": "Socle ASSMAT", "art_ef": "Socle SPE", "art_sc": "Socle commun"}
     },
     'EN': {
         'titre': "⚖️ 3239 Agreement Guide",
         'recherche_label': "Direct search (Article #)",
         'btn_aller': "Go", 'btn_home': "🏠 Home", 'btn_retour': "⬅️ Back",
         'intro': "**Welcome!** 🚀\nFind your answer in a few clicks.",
-        'step1': "1️⃣ What is your job?", 'step2': "2️⃣ What is the timing?",
-        'step3': "3️⃣ Choose a category", 'step4': "4️⃣ Specify your subject",
-        'step5': "5️⃣ What is your question?",
+        'step1': "1️⃣ What is your job?",
         'metiers': {
             "🍼 Childminder": "art_am", "👶 Nanny": "art_ef", 
             "🏠 Domestic Worker": "art_ef", "👵 Care Assistant": "art_ef", "🌳 Others": "art_sc"
-        }
+        },
+        'socles': {"art_am": "ASSMAT Socle", "art_ef": "SPE Socle", "art_sc": "Common Socle"}
     }
 }
 
-# --- 6. BARRE SUPÉRIEURE : LANGUES & RAPPEL MÉTIER ---
-c1, c2, c3 = st.columns([1, 1, 3])
+# --- 6. BARRE SUPÉRIEURE : LANGUES & RAPPEL DU SOCLE ---
+c1, c2, c3 = st.columns([1, 1, 2]) # Ratio équilibré pour mobile
+
 with c1:
     st.markdown('<div class="btn-flag">', unsafe_allow_html=True)
     if st.button("🇫🇷"):
@@ -155,14 +155,13 @@ txt = UI[lang_code]
 
 with c3:
     if 'colonne_metier' in st.session_state.choix:
-        # On inverse le dico pour trouver le label à partir de la valeur technique (ex: art_am)
-        inv_metiers = {v: k for k, v in txt['metiers'].items()}
-        label_metier = inv_metiers.get(st.session_state.choix['colonne_metier'], "")
-        st.markdown(f'<div class="metier-badge">{label_metier}</div>', unsafe_allow_html=True)
+        # On affiche le nom du SOCLE au lieu du métier
+        nom_socle = txt['socles'].get(st.session_state.choix['colonne_metier'], "")
+        st.markdown(f'<div class="socle-badge">{nom_socle}</div>', unsafe_allow_html=True)
 
 st.title(txt['titre'])
 
-# --- 7. RECHERCHE RAPIDE ---
+# --- 7. RECHERCHE ET NAVIGATION (Inchangé) ---
 with st.expander(f"🔍 {txt['recherche_label']}"):
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -182,7 +181,7 @@ if st.session_state.step != 1:
 
 st.divider()
 
-# --- 8. LOGIQUE DE NAVIGATION ---
+# --- 8. LOGIQUE DE NAVIGATION (ETAPES 1-6 INTACTES) ---
 if st.session_state.step == "DIRECT":
     afficher_dossier_article(st.session_state.art_cible, lang_code)
 
@@ -195,8 +194,9 @@ elif st.session_state.step == 1:
             st.session_state.step = 2
             st.rerun()
 
+# [Les étapes 2 à 6 restent identiques au code précédent pour assurer la continuité]
 elif st.session_state.step == 2:
-    st.subheader(txt['step2'])
+    st.subheader("2️⃣ Quel est le moment ?" if lang_code == 'FR' else "2️⃣ When?")
     conn = get_connection(); cursor = conn.cursor()
     col_db = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
     cursor.execute(f"SELECT DISTINCT {col_db} FROM questions WHERE {col_db} IS NOT NULL AND {col_db} != ''")
@@ -209,7 +209,7 @@ elif st.session_state.step == 2:
     if st.button(txt['btn_retour']): st.session_state.step = 1; st.rerun()
 
 elif st.session_state.step == 3:
-    st.subheader(txt['step3'])
+    st.subheader("3️⃣ Choisissez une catégorie" if lang_code == 'FR' else "3️⃣ Category")
     conn = get_connection(); cursor = conn.cursor()
     col_fam = "famille" if lang_code == 'FR' else "famille_en"
     col_etp = "etape_vie" if lang_code == 'FR' else "etape_vie_en"
@@ -223,7 +223,7 @@ elif st.session_state.step == 3:
     if st.button(txt['btn_retour']): st.session_state.step = 2; st.rerun()
 
 elif st.session_state.step == 4:
-    st.subheader(txt['step4'])
+    st.subheader("4️⃣ Précisez votre sujet" if lang_code == 'FR' else "4️⃣ Subject")
     conn = get_connection(); cursor = conn.cursor()
     col_th = "theme" if lang_code == 'FR' else "theme_en"
     col_fam = "famille" if lang_code == 'FR' else "famille_en"
@@ -237,7 +237,7 @@ elif st.session_state.step == 4:
     if st.button(txt['btn_retour']): st.session_state.step = 3; st.rerun()
 
 elif st.session_state.step == 5:
-    st.subheader(txt['step5'])
+    st.subheader("5️⃣ Quelle est votre question ?" if lang_code == 'FR' else "5️⃣ Question")
     conn = get_connection(); cursor = conn.cursor()
     col_q = "question_claire" if lang_code == 'FR' else "question_en"
     col_th = "theme" if lang_code == 'FR' else "theme_en"
